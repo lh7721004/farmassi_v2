@@ -1,5 +1,6 @@
 import type { DepositProvider, DepositProviderId } from './types'
 import { banksaladDepositProvider } from './providers/banksalad'
+import { bankdaDepositProvider } from './providers/bankda'
 import { codefDepositProvider } from './providers/codef'
 import { gndDepositProvider } from './providers/gnd'
 import { hectoDepositProvider } from './providers/hecto'
@@ -11,6 +12,7 @@ const providers: Record<DepositProviderId, DepositProvider> = {
   hecto: hectoDepositProvider,
   banksalad: banksaladDepositProvider,
   codef: codefDepositProvider,
+  bankda: bankdaDepositProvider,
 }
 
 export function getDepositProvider(id: DepositProviderId = 'manual'): DepositProvider {
@@ -23,4 +25,5 @@ export const DEPOSIT_PROVIDER_ENV = {
   BANKSALAD_API_KEY: 'BANKSALAD_API_KEY',
   CODEF_CLIENT_ID: 'CODEF_CLIENT_ID',
   CODEF_CLIENT_SECRET: 'CODEF_CLIENT_SECRET',
+  BANKDA_ACCESS_TOKEN: 'BANKDA_ACCESS_TOKEN',
 } as const

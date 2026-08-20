@@ -1,10 +1,11 @@
 /**
  * Deposit confirmation provider interface.
- * v1 uses `manual`. GND / Hecto / BankSalad / CodeF implement poll() later
+ * v1 uses `manual`. `bankda` is polled server-side by the scrape-deposits function.
+ * GND / Hecto / BankSalad / CodeF implement poll() later
  * and call the same confirm-deposit entrypoint.
  */
 
-export type DepositProviderId = 'manual' | 'gnd' | 'hecto' | 'banksalad' | 'codef'
+export type DepositProviderId = 'manual' | 'gnd' | 'hecto' | 'banksalad' | 'codef' | 'bankda'
 
 export interface PolledDeposit {
   occurredAt: string
