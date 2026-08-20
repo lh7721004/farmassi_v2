@@ -45,10 +45,21 @@ export function AdminDashboard() {
         }
       />
       <div className="px-4 py-4 md:px-6 max-w-5xl mx-auto grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="농가" value={`${farmCount}곳`} icon={Sprout} />
-        <StatCard label="입금 대기" value={`${pendingDeposits}건`} icon={CreditCard} />
-        <StatCard label="출고 대기" value={`${paidOrders}건`} icon={Truck} />
-        <StatCard label="매출(최근)" value={formatPrice(revenue)} icon={Package} />
+        <StatCard label="농가" value={`${farmCount}곳`} icon={Sprout} to="/admin/farms" />
+        <StatCard
+          label="입금 대기"
+          value={`${pendingDeposits}건`}
+          icon={CreditCard}
+          to="/admin/deposits"
+        />
+        {/* 출고 대기는 paid·packing 주문 수. 송장 화면이 같은 조건으로 목록을 보여준다. */}
+        <StatCard label="출고 대기" value={`${paidOrders}건`} icon={Truck} to="/admin/shipments" />
+        <StatCard
+          label="매출(최근)"
+          value={formatPrice(revenue)}
+          icon={Package}
+          to="/admin/orders"
+        />
       </div>
     </AppShell>
   )

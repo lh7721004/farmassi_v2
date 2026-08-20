@@ -77,9 +77,25 @@ export function FarmDashboard() {
       />
       <div className="px-4 py-4 md:px-6 max-w-5xl mx-auto space-y-6">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-          <StatCard label="오늘 주문" value={`${todayOrders}건`} icon={Package} />
-          <StatCard label="출고 대기" value={`${pendingDelivery}건`} icon={Truck} />
-          <StatCard label="이번 달 매출" value={formatPrice(monthRevenue)} icon={LayoutDashboard} />
+          <StatCard
+            label="오늘 주문"
+            value={`${todayOrders}건`}
+            icon={Package}
+            to={`${basePath}/orders`}
+          />
+          {/* 배송 화면이 같은 조건(paid·packing)으로 목록을 보여준다. */}
+          <StatCard
+            label="출고 대기"
+            value={`${pendingDelivery}건`}
+            icon={Truck}
+            to={`${basePath}/delivery`}
+          />
+          <StatCard
+            label="이번 달 매출"
+            value={formatPrice(monthRevenue)}
+            icon={LayoutDashboard}
+            to={`${basePath}/orders`}
+          />
         </div>
         {trend.length > 0 && <OrderChart data={trend} />}
         <section>

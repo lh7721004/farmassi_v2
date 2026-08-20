@@ -21,8 +21,10 @@ export function Landing() {
   useEffect(() => {
     supabase
       .from('farms')
+      // is_listed=false 인 농가는 목록에 안 띄운다. 주소로는 그대로 들어갈 수 있다.
       .select('*')
       .eq('is_active', true)
+      .eq('is_listed', true)
       .order('name')
       .then(({ data }) => {
         setFarms((data as Farm[]) ?? [])
