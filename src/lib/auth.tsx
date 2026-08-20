@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { supabase } from './supabase'
 import type { Farm, FarmMemberRole, Profile } from '../types/models'
-import type { Session, User } from '@supabase/supabase-js'
+import type { Session, User } from './apiClient'
 
 interface FarmMembership {
   farm_id: string
@@ -39,7 +39,7 @@ async function loadUserState(user: User | null) {
   ])
 
   const memberRows = memberRes.data ?? []
-  const farmIds = memberRows.map((row) => row.farm_id as string)
+  const farmIds = memberRows.map((row: any) => row.farm_id as string)
   const farmsById = new Map<string, Farm>()
   if (farmIds.length > 0) {
     const { data: farmRows } = await supabase.from('farms').select('*').in('id', farmIds)
@@ -47,7 +47,7 @@ async function loadUserState(user: User | null) {
   }
 
   const memberships: FarmMembership[] = memberRows
-    .map((row) => {
+    .map((row: any) => {
       const farm = farmsById.get(row.farm_id as string)
       if (!farm) return null
       return {
@@ -56,7 +56,7 @@ async function loadUserState(user: User | null) {
         farm,
       }
     })
-    .filter((row): row is FarmMembership => row !== null)
+    .filter((row: FarmMembership | null): row is FarmMembership => row !== null)
 
   return {
     profile: (profileRes.data as Profile | null) ?? null,

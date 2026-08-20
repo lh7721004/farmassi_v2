@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>me.lkim.farmassi-api</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>--experimental-strip-types</string>
+    <string>--env-file=/Users/lkim/FetchAccount/nh_agtech/server/.env</string>
+    <string>/Users/lkim/FetchAccount/nh_agtech/server/src/index.ts</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/lkim/FetchAccount/nh_agtech/server</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/lkim/FetchAccount/nh_agtech/server/api.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/lkim/FetchAccount/nh_agtech/server/api.err.log</string>
+</dict>
+</plist>

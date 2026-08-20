@@ -1,17 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
-
-const url = import.meta.env.VITE_SUPABASE_URL
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-if (!url || !anonKey) {
-  throw new Error('VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.')
-}
-
-export const supabase = createClient(url, anonKey, {
-  auth: {
-    persistSession: true,
-    detectSessionInUrl: false,
-    flowType: 'pkce',
-    autoRefreshToken: true,
-  },
-})
+// 자체 API 클라이언트로 교체됨. 기존 import 경로를 유지하기 위해 여기서 다시 내보낸다.
+export { supabase, getToken } from './apiClient'
+export type { Session, User } from './apiClient'

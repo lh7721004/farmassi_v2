@@ -1,0 +1,14 @@
+{
+  "name": "farmassi-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/index.ts",
+    "start": "node --experimental-strip-types src/index.ts"
+  },
+  "dependencies": {
+    "nodemailer": "^9.0.5",
+    "pg": "^8.13.1",
+    "web-push": "^3.6.7"
+  }
+}

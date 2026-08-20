@@ -94,3 +94,5 @@ temp/
 *.orig
 *.tmp
 todo
+server/.env
+.env.production
