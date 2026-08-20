@@ -8,7 +8,7 @@ export type OrderStatus =
   | 'completed'
   | 'cancelled'
 export type NotificationType = 'order_created' | 'deposit_confirmed' | 'shipment_requested'
-export type DepositProvider = 'manual' | 'gnd' | 'hecto' | 'banksalad' | 'codef'
+export type DepositProvider = 'manual' | 'gnd' | 'hecto' | 'banksalad' | 'codef' | 'bankda'
 export type ShipmentStatus = 'draft' | 'requested' | 'printed' | 'cancelled'
 export type MatchStatus = 'unmatched' | 'matched' | 'ignored'
 export type ProductSaleStatus = 'on_sale' | 'coming_soon' | 'sold_out' | 'hidden'

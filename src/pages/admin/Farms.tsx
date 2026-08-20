@@ -677,7 +677,7 @@ export function AdminFarms() {
                     map_url: editing.map_url,
                   }}
                   value={editing.share_text ?? ''}
-                  onChange={(share_text) => setEditing({ ...editing, share_text })}
+                  onChange={(share_text) => setEditing((prev) => (prev ? { ...prev, share_text } : prev))}
                 />
                 <LandingBlocksField
                   blocks={editLanding}
