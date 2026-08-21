@@ -210,8 +210,12 @@ async function runQueryOnce(db: Db, request: QueryRequest): Promise<QueryResult>
       sql += ` order by ${parts.join(', ')}`
     }
 
-    if (request.single) sql += ' limit 2'          // 2건 이상인지 알아야 single 판정이 된다
-    else if (request.limit !== undefined) sql += ` limit ${Number(request.limit) | 0}`
+    if (request.single) {
+      // single/maybeSingle 은 2건 이상인지 알아야 판정이 된다. 다만 호출부가 limit 을
+      // 줬으면 그 값을 넘기지 않는다 (.limit(1).maybeSingle() 이 오류가 되면 안 된다).
+      const cap = request.limit !== undefined ? Math.min(Number(request.limit) | 0, 2) : 2
+      sql += ` limit ${cap}`
+    } else if (request.limit !== undefined) sql += ` limit ${Number(request.limit) | 0}`
     if (request.offset) sql += ` offset ${Number(request.offset) | 0}`
 
     const rows = (await db.query(sql, ctx.params)).rows
