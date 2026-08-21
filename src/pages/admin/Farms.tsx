@@ -17,6 +17,7 @@ import {
   type LandingBlockDraft,
 } from '../../components/shared/LandingBlocksField'
 import { AddressPicker } from '../../components/shared/AddressPicker'
+import { BankdaAccountLink } from '../../components/shared/BankdaAccountLink'
 import { FarmSharePreview } from '../../components/shared/FarmSharePreview'
 import { adminNavItems } from '../../config/adminNav'
 import { kakaoChannelHref, safeHttpUrl } from '../../lib/format'
@@ -868,6 +869,9 @@ export function AdminFarms() {
                   >
                     계정 연결
                   </Button>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <BankdaAccountLink farmId={farm.id} farmName={farm.name} />
+                  </div>
                   <Button
                     size="sm"
                     variant="ghost"

@@ -7,6 +7,11 @@
 
 const TRANSACTIONS_URL = 'https://a.bankda.com/dtsvc/bank_tr.php'
 const ACCOUNT_URL = 'https://a.bankda.com/dtsvc/hub_account.php'
+const MERCHANT_URL = 'https://a.bankda.com/dtsvc/hub_merchant.php'
+const OTT_URL = 'https://a.bankda.com/dtsvc/hub_ott.php'
+
+/** 계좌 등록 Form 주소. 사람에게 링크로 건네는 쪽(GET)이다. */
+const OTT_FORM_URL = 'https://a.bankda.com/partner/account/ott?ott='
 
 export interface BankdaRow {
   bkcode: string
@@ -121,4 +126,79 @@ export async function listAccounts(): Promise<BankdaAccount[]> {
   }
   if (parsed.success === false) throw new BankdaError(parsed.message ?? '계좌 목록 조회 실패')
   return parsed.data ?? []
+}
+
+async function postJson(url: string, payload: Record<string, unknown>): Promise<any> {
+  const token = accessToken()
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      access_token: token,
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+    body: JSON.stringify(payload),
+  })
+  const text = await response.text()
+  let parsed: any
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new BankdaError(`응답을 해석하지 못했습니다: ${text.slice(0, 200)}`)
+  }
+  // 뱅크다는 실패해도 HTTP 200 을 준다. 본문으로 판단해야 한다.
+  if (parsed.success === false) throw new BankdaError(parsed.message ?? '요청이 실패했습니다.')
+  if (parsed.status === 'error') {
+    // OTT 는 사유를 error_message 에 담는다.
+    throw new BankdaError(parsed.error_message ?? parsed.message ?? '요청이 실패했습니다.')
+  }
+  return parsed
+}
+
+/** 가맹점 등록. password 는 영문+숫자 8~20자. email 과 email_sub 는 달라야 한다. */
+export async function createMerchant(options: {
+  email: string
+  merchantEmail: string
+  password: string
+  accountsCount?: number
+}): Promise<void> {
+  await postJson(MERCHANT_URL, {
+    email: options.email,
+    email_sub: options.merchantEmail,
+    password: options.password,
+    customer_accounts_count: options.accountsCount ?? 1,
+    scraping_month: 0,
+  })
+}
+
+export async function listMerchants(): Promise<Array<{ email: string; email_sub: string }>> {
+  const token = accessToken()
+  const response = await fetch(MERCHANT_URL, {
+    headers: { Authorization: `Bearer ${token}`, access_token: token },
+  })
+  const parsed = await response.json() as { success?: boolean; data?: any[] }
+  return parsed.data ?? []
+}
+
+/**
+ * 계좌 등록용 1회용 링크.
+ *
+ * 계좌 비밀번호·생년월일·인터넷뱅킹 정보는 이 링크에서 계좌 주인이 뱅크다에 직접
+ * 입력한다. 우리 서버는 그 값을 만지지 않는다.
+ * 유효시간: 링크를 여는 데 10분, 연 뒤 작업 완료까지 20분. 1회용이다.
+ */
+export async function issueAccountOtt(options: {
+  email: string
+  merchantEmail: string
+  returnUrl?: string
+}): Promise<{ url: string; expiresIn: number }> {
+  const parsed = await postJson(OTT_URL, {
+    email: options.email,
+    merchant_email: options.merchantEmail,
+    ...(options.returnUrl ? { return_url: options.returnUrl } : {}),
+    datatype: 'json',
+    charset: 'utf8',
+  })
+  if (!parsed.ott) throw new BankdaError('OTT 를 받지 못했습니다.')
+  return { url: `${OTT_FORM_URL}${parsed.ott}`, expiresIn: Number(parsed.expires_in ?? 600) }
 }

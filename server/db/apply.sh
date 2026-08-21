@@ -21,4 +21,5 @@ done
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$HERE/001_local_grants.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$HERE/002_admin_grant.sql"
 psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$HERE/003_scrape_state.sql"
+psql -q -d "$DB" -v ON_ERROR_STOP=1 -f "$HERE/004_bankda_merchant.sql"
 echo "완료"
