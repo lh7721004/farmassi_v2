@@ -1,7 +1,21 @@
 import pg from 'pg'
 import { config } from './config.ts'
 
-const { Pool } = pg
+const { Pool, types } = pg
+
+/**
+ * 시각을 PostgREST 와 같은 형식으로 낸다.
+ *
+ * node-postgres 는 timestamptz 를 JS Date 로 바꾸는데, 그러면 JSON 직렬화 때
+ * 밀리초까지만 남고 '...Z' 형식이 된다. 원본 백엔드(PostgREST)는 마이크로초까지
+ * 살린 '...+00:00' 문자열을 준다. 값을 그대로 문자열로 넘겨 형식을 맞춘다.
+ * (접속 시 timezone=UTC 를 걸어 두므로 오프셋은 항상 +00 이다.)
+ */
+const asPostgrestTimestamp = (value: string | null) =>
+  value === null ? null : value.replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00')
+
+types.setTypeParser(1184, asPostgrestTimestamp)  // timestamptz
+types.setTypeParser(1114, (v: string | null) => (v === null ? null : v.replace(' ', 'T')))  // timestamp
 
 /**
  * 접속 풀 두 개.
@@ -11,8 +25,10 @@ const { Pool } = pg
  * admin — RLS 를 우회한다. 주문번호 발급, 입금 대사처럼 여러 사용자의 데이터를
  *         가로질러야 하는 서버 내부 작업에만 쓴다.
  */
-export const appPool = new Pool({ connectionString: config.dbAppUrl, max: 10 })
-export const adminPool = new Pool({ connectionString: config.dbAdminUrl, max: 4 })
+export const appPool = new Pool({ connectionString: config.dbAppUrl, max: 10,
+  options: '-c timezone=UTC' })
+export const adminPool = new Pool({ connectionString: config.dbAdminUrl, max: 4,
+  options: '-c timezone=UTC' })
 
 export type Db = pg.PoolClient
 
