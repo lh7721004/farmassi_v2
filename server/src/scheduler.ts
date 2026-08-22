@@ -11,10 +11,16 @@ import { listAccounts } from './shared/bankda.ts'
  *
  * 결과적으로 거래내역 호출은 하루 24회 근처가 되고, 새 입금은 스크래핑 직후에 잡힌다.
  */
+/** 로그에 시각이 없으면 나중에 무슨 일이 언제 있었는지 알 수가 없다. */
+function log(message: string): void {
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' })
+  console.log(`[${now}] ${message}`)
+}
+
 export function startScheduler(): void {
   const minutes = Number(process.env.SCRAPE_CHECK_MINUTES ?? 5)
   if (!Number.isFinite(minutes) || minutes <= 0) {
-    console.log('입금 자동조회: 꺼짐')
+    log('입금 자동조회: 꺼짐')
     return
   }
 
@@ -58,20 +64,20 @@ export function startScheduler(): void {
 
       const body = result.body as any
       if (result.status !== 200) {
-        console.log(`입금 조회 건너뜀: ${body?.error}`)
+        log(`입금 조회 건너뜀: ${body?.error}`)
         return
       }
       if (advanced.length > 0) {
-        console.log(`입금 조회(계좌 ${advanced.length}곳 갱신됨): 신규 ${body.inserted}건, 연결 ${body.matched}건`)
+        log(`입금 조회(계좌 ${advanced.length}곳 갱신됨: ${advanced.join(', ')}): 신규 ${body.inserted}건, 연결 ${body.matched}건`)
       } else if (body.rematched > 0) {
-        console.log(`재대사로 ${body.rematched}건 연결`)
+        log(`재대사로 ${body.rematched}건 연결`)
       }
     } catch (error) {
-      console.error('입금 조회 실패', error instanceof Error ? error.message : error)
+      log(`입금 조회 실패: ${error instanceof Error ? error.message : error}`)
     }
   }
 
-  console.log(`입금 자동조회: ${minutes}분마다 갱신 여부 확인 (거래내역은 갱신됐을 때만 호출)`)
+  log(`입금 자동조회: ${minutes}분마다 갱신 여부 확인 (거래내역은 갱신됐을 때만 호출)`)
   setTimeout(() => void tick(), 20_000)
   setInterval(() => void tick(), minutes * 60_000)
 }
