@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { ApiErrorNotice } from './components/shared/ApiErrorNotice'
 import { GoogleAnalytics } from './components/shared/GoogleAnalytics'
 import { RedirectToFarmWorkspace, RequireAdmin, RequireAuth, RequireFarmWorkspace } from './components/auth/Guards'
 import { LoginSheetProvider } from './components/auth/LoginSheet'
@@ -34,6 +35,7 @@ export default function App() {
     <BrowserRouter>
       <GoogleAnalytics />
       <LoginSheetProvider>
+        <ApiErrorNotice />
         <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />

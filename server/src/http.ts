@@ -37,14 +37,21 @@ export function userFrom(req: IncomingMessage): string | null {
   return verify(header.slice(7))?.sub ?? null
 }
 
+/**
+ * 일반 요청 본문 상한. 조회·함수 호출에는 이 정도면 넉넉하다.
+ * 이미지 업로드는 base64 로 33% 부풀기 때문에 따로 더 크게 받는다.
+ */
 const MAX_BODY = 2 * 1024 * 1024
+export const MAX_UPLOAD_BODY = 9 * 1024 * 1024   // 5MB 원본 + base64 여유
 
-export async function readJson(req: IncomingMessage): Promise<any> {
+export async function readJson(req: IncomingMessage, maxBytes = MAX_BODY): Promise<any> {
   const chunks: Buffer[] = []
   let size = 0
   for await (const chunk of req) {
     size += chunk.length
-    if (size > MAX_BODY) throw new Error('요청 본문이 너무 큽니다.')
+    if (size > maxBytes) {
+      throw new Error(`요청 본문이 너무 큽니다. (최대 ${Math.floor(maxBytes / 1024 / 1024)}MB)`)
+    }
     chunks.push(chunk as Buffer)
   }
   if (chunks.length === 0) return {}

@@ -40,18 +40,44 @@ function userIdFrom(token: string): string {
   }
 }
 
+/**
+ * 통신 실패를 화면 어딘가에는 반드시 알린다.
+ *
+ * 조회하는 화면 상당수가 { data } 만 꺼내 쓰고 error 를 보지 않는다. 그러면 서버가
+ * 죽어도 "주문이 없습니다" 처럼 보여서 사용자가 원인을 알 수 없다. 실패한 요청은
+ * 여기서 이벤트로 알리고, 앱 한 곳에서 받아 띄운다.
+ * RLS 로 결과가 비는 것은 실패가 아니므로 여기 걸리지 않는다.
+ */
+export const API_ERROR_EVENT = 'farmassi:api-error'
+
+function announceFailure(message: string) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(API_ERROR_EVENT, { detail: message }))
+}
+
 async function request(path: string, body?: unknown, method = 'POST'): Promise<any> {
   const token = getToken()
-  const response = await fetch(API + path, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: method === 'GET' ? undefined : JSON.stringify(body ?? {}),
-  })
+  let response: Response
+  try {
+    response = await fetch(API + path, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: method === 'GET' ? undefined : JSON.stringify(body ?? {}),
+    })
+  } catch {
+    const message = '서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+    announceFailure(message)
+    throw new Error(message)
+  }
   const payload = await response.json().catch(() => ({ error: '응답을 읽지 못했습니다.' }))
-  if (!response.ok) throw new Error(payload.error ?? `요청 실패 (${response.status})`)
+  if (!response.ok) {
+    const message = payload.error ?? `요청 실패 (${response.status})`
+    announceFailure(message)
+    throw new Error(message)
+  }
   return payload
 }
 

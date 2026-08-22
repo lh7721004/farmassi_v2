@@ -2,7 +2,7 @@ import { createServer } from 'node:http'
 import { config } from './config.ts'
 import { adminPool, appPool, withAdmin, withUser } from './db.ts'
 import { functions } from './functions/index.ts'
-import { cors, readJson, send, userFrom } from './http.ts'
+import { cors, MAX_UPLOAD_BODY, readJson, send, userFrom } from './http.ts'
 import { runQuery } from './query.ts'
 import { loadSchema } from './schema.ts'
 import { serveFile, uploadImage, deleteImage } from './storage.ts'
@@ -52,7 +52,7 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && path === '/storage/upload') {
-      const body = await readJson(req)
+      const body = await readJson(req, MAX_UPLOAD_BODY)
       const bytes = Buffer.from(String(body.data ?? ''), 'base64')
       const result = await withUser(userId, (db) =>
         uploadImage(db, userId, String(body.path ?? ''), String(body.contentType ?? ''), bytes))
