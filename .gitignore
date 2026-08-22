@@ -96,3 +96,6 @@ temp/
 todo
 server/.env
 .env.production
+
+# 서버 전체 nginx 설정 백업 — 도메인·내부 포트가 드러나므로 저장소에 두지 않는다
+deploy/nginx.conf.backup-*
