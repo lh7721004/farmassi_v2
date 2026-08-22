@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { sb } from '../sb.ts'
-import { BankdaError, createMerchant, issueAccountOtt } from '../shared/bankda.ts'
+import { BankdaError, createMerchant, issueAccountModifyOtt, issueAccountOtt,
+         listMerchantAccounts } from '../shared/bankda.ts'
 import { isAdmin } from '../shared/util.ts'
 import { fail, ok, type FnHandler } from './types.ts'
 
@@ -59,8 +60,15 @@ export const bankdaOtt: FnHandler = async ({ userId, body, admin }) => {
       await db.from('farms').update({ bankda_merchant_email: merchantEmail }).eq('id', farmId)
     }
 
-    const ott = await issueAccountOtt({ email: mainEmail, merchantEmail })
+    // 이미 등록된 계좌를 바꾸는 경우에는 수정용 OTT 를 쓴다.
+    // 가맹점당 등록 가능 계좌 수가 1이라, 등록용으로 다시 뽑으면 뱅크다가 막는다.
+    const accountNumber = String(body?.accountNumber ?? '')
+    const ott = accountNumber
+      ? await issueAccountModifyOtt({ email: mainEmail, accountNumber })
+      : await issueAccountOtt({ email: mainEmail, merchantEmail })
+
     return ok({
+      mode: accountNumber ? 'modify' : 'register',
       url: ott.url,
       expiresIn: ott.expiresIn,
       merchantEmail,

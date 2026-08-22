@@ -202,3 +202,48 @@ export async function issueAccountOtt(options: {
   if (!parsed.ott) throw new BankdaError('OTT 를 받지 못했습니다.')
   return { url: `${OTT_FORM_URL}${parsed.ott}`, expiresIn: Number(parsed.expires_in ?? 600) }
 }
+
+/** 특정 가맹점에 붙어 있는 계좌 목록. 등록 완료 여부를 판단하는 데 쓴다. */
+export async function listMerchantAccounts(
+  email: string, merchantEmail: string,
+): Promise<BankdaAccount[]> {
+  const token = accessToken()
+  const url = `${ACCOUNT_URL}?email=${encodeURIComponent(email)}&email_sub=${encodeURIComponent(merchantEmail)}`
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, access_token: token },
+  })
+  const parsed = await response.json() as { success?: boolean; message?: string; data?: BankdaAccount[] }
+  // 가맹점은 있는데 계좌가 없으면 success:true / data:[] 로 온다.
+  if (parsed.success === false) return []
+  return parsed.data ?? []
+}
+
+/** 계좌 '수정'용 OTT. 이미 등록된 계좌를 바꿀 때 쓴다 (등록용은 POST, 수정은 PUT). */
+export async function issueAccountModifyOtt(options: {
+  email: string
+  accountNumber: string
+  returnUrl?: string
+}): Promise<{ url: string; expiresIn: number }> {
+  const token = accessToken()
+  const response = await fetch(OTT_URL, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      access_token: token,
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+    body: JSON.stringify({
+      email: options.email,
+      account_number: options.accountNumber,
+      ...(options.returnUrl ? { return_url: options.returnUrl } : {}),
+      datatype: 'json',
+      charset: 'utf8',
+    }),
+  })
+  const parsed = await response.json() as any
+  if (parsed.status === 'error') {
+    throw new BankdaError(parsed.error_message ?? parsed.message ?? '수정 링크 발급에 실패했습니다.')
+  }
+  if (!parsed.ott) throw new BankdaError('OTT 를 받지 못했습니다.')
+  return { url: `${OTT_FORM_URL}${parsed.ott}`, expiresIn: Number(parsed.expires_in ?? 600) }
+}
