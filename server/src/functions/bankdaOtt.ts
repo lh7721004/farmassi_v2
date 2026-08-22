@@ -22,9 +22,16 @@ function randomPassword(): string {
   return `${out.slice(0, 10)}a7`
 }
 
+/**
+ * 농가 id 전체를 쓴다.
+ *
+ * 앞 8자만 쓰면 겹칠 수 있다. 실제로 더미 농가 두 곳이 같은 접두사를 갖고 있어서
+ * 두 번째 농가의 가맹점 생성이 "이미 등록된 가맹점입니다" 로 실패했다.
+ * 하이픈을 뺀 32자를 붙여도 이메일 로컬 파트 길이 제한(64자) 안에 들어간다.
+ */
 function merchantEmailFor(farmId: string): string {
   const domain = process.env.BANKDA_MERCHANT_DOMAIN ?? 'farm.shop.lkim.me'
-  return `farm-${farmId.slice(0, 8)}@${domain}`
+  return `farm-${farmId.replace(/-/g, '')}@${domain}`
 }
 
 export const bankdaOtt: FnHandler = async ({ userId, body, admin }) => {
@@ -48,7 +55,14 @@ export const bankdaOtt: FnHandler = async ({ userId, body, admin }) => {
     if (!merchantEmail) {
       merchantEmail = merchantEmailFor(farmId)
       const password = randomPassword()
-      await createMerchant({ email: mainEmail, merchantEmail, password, accountsCount: 1 })
+      try {
+        await createMerchant({ email: mainEmail, merchantEmail, password, accountsCount: 1 })
+      } catch (error) {
+        // 가맹점은 만들어졌는데 우리 쪽 기록이 남지 않은 경우가 있을 수 있다.
+        // 이미 있다는 응답이면 그대로 쓰고 진행한다.
+        const message = error instanceof Error ? error.message : ''
+        if (!/이미 등록된 가맹점/.test(message)) throw error
+      }
 
       // 비밀번호는 private 스키마에만 둔다.
       await admin.query(
