@@ -180,3 +180,18 @@ nginx 설정은 `/opt/homebrew/etc/nginx/nginx.conf` 에 있고, 원본 백업�
 
 Postgres 논리복제 대신 15초 폴링으로 대체했습니다 (`src/lib/apiClient.ts` 의 `channel`).
 첫 조회는 기존 행을 기록만 하므로 새로고침할 때마다 알림이 다시 뜨지 않습니다.
+
+### 저장소에 없는 것
+
+비밀값과 업로드 파일은 커밋하지 않습니다. 새 기기에 세울 때 따로 챙겨야 합니다.
+
+| 필요한 것 | 놓을 위치 | 없으면 |
+|---|---|---|
+| `server/.env` | 그대로 | API 가 뜨지 않음 |
+| `.env.production` | 그대로 | 번들이 잘못된 API 주소를 가리킴 |
+| 업로드 이미지 | `/opt/homebrew/var/www/shop-uploads/` | 상품·랜딩 이미지가 깨짐 |
+
+`server/.env` 에 들어가는 항목은 `.env.example` 을, 프론트 항목은 `src/vite-env.d.ts` 를
+보면 됩니다. **값은 저장소 어디에도 없습니다.**
+
+운영 중인 기기에서는 `~/FetchAccount/farmassi-secrets/` 에 모아 두었습니다(권한 700).
