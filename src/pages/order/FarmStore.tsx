@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Header } from '../../components/layout/Header'
 import { useLoginSheet } from '../../components/auth/LoginSheet'
-import { DeliveryEstimate } from '../../components/shared/DeliveryEstimate'
 import { FarmInquiryButtons } from '../../components/shared/KakaoChannelButton'
 import { ProductCard } from '../../components/shared/ProductCard'
 import { ShippingScheduleNotice } from '../../components/shared/ShippingScheduleNotice'
@@ -117,17 +116,7 @@ export function FarmStore() {
             <p className="text-sm text-gray-700">{farm.description || farm.product_summary}</p>
           </Card>
         ) : null}
-        {/*
-          배송 안내는 하나만 보여준다. 둘 다 트럭 아이콘에 같은 배경이라
-          나란히 두면 똑같은 상자가 두 개 겹친다.
-          농가가 배송 요일을 정해 뒀으면 그 농가에 맞는 안내를, 아직 정하지
-          않았으면 일반 안내를 쓴다.
-        */}
-        {farm.delivery_days?.length ? (
-          <DeliveryEstimate days={farm.delivery_days} />
-        ) : (
-          <ShippingScheduleNotice />
-        )}
+        <ShippingScheduleNotice />
         {products.length === 0 ? (
           <p className="text-center text-muted py-10">판매 중인 상품이 없습니다</p>
         ) : (
