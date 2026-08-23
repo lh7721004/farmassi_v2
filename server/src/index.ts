@@ -7,6 +7,7 @@ import { runQuery } from './query.ts'
 import { loadSchema } from './schema.ts'
 import { serveFile, uploadImage, deleteImage } from './storage.ts'
 import { sign } from './jwt.ts'
+import { VERSION } from './version.ts'
 import { kakaoCallback, kakaoStart } from './kakao.ts'
 import { sb } from './sb.ts'
 import { startScheduler } from './scheduler.ts'
@@ -22,6 +23,11 @@ const server = createServer(async (req, res) => {
   try {
     if (path === '/health') {
       return send(res, 200, { ok: true })
+    }
+
+    // 화면에서 지금 돌고 있는 서버가 무엇인지 보여주기 위한 것.
+    if (req.method === 'GET' && path === '/version') {
+      return send(res, 200, VERSION)
     }
 
     // 업로드된 이미지 서빙
@@ -110,7 +116,7 @@ const server = createServer(async (req, res) => {
 
 await loadSchema()
 server.listen(config.port, '127.0.0.1', () => {
-  console.log(`farmassi API → http://127.0.0.1:${config.port}`)
+  console.log(`farmassi API v${VERSION.version} (${VERSION.commit}) → http://127.0.0.1:${config.port}`)
   startScheduler()
 })
 
