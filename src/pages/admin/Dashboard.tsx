@@ -2,6 +2,7 @@ import { CreditCard, Package, Sprout, Truck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { AppShell } from '../../components/layout/AppShell'
 import { Header } from '../../components/layout/Header'
+import { VersionBadge } from '../../components/shared/VersionBadge'
 import { StatCard } from '../../components/ui/StatCard'
 import { adminNavItems } from '../../config/adminNav'
 import { useAuth } from '../../lib/auth'
@@ -61,6 +62,7 @@ export function AdminDashboard() {
           to="/admin/orders"
         />
       </div>
+      <VersionBadge />
     </AppShell>
   )
 }
