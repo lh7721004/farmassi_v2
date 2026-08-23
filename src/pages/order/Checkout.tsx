@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ChevronDown, LocateFixed, MapPin, Search } from 'lucide-react'
 import { DeliveryEstimate } from '../../components/shared/DeliveryEstimate'
 import { Header } from '../../components/layout/Header'
 import { Button } from '../../components/ui/Button'
@@ -40,6 +41,15 @@ export function Checkout() {
     address_detail: '',
     request_memo: '',
   })
+  const [senderUi, setSenderUi] = useState({
+    depositorName: '',
+    phone: '',
+    name: '',
+    senderPhone: '',
+    addressDetail: '',
+  })
+  const [sameAsDepositorUi, setSameAsDepositorUi] = useState(false)
+  const [senderOpenUi, setSenderOpenUi] = useState(false)
 
   const cart = getCart(farmSlug)
   const qtyById = useMemo(
@@ -171,6 +181,93 @@ export function Checkout() {
         </Card>
 
         <Card className="space-y-3">
+          <h3 className="font-semibold">입금자</h3>
+          <p className="text-xs text-muted">입금 확인에 사용됩니다. 입금자명과 입금자 연락처는 필수입니다.</p>
+          <Input
+            form=""
+            label="입금자명"
+            placeholder="통장에 표시될 이름"
+            autoComplete="off"
+            value={senderUi.depositorName}
+            onChange={(e) => setSenderUi((p) => ({ ...p, depositorName: e.target.value }))}
+          />
+          <PhoneField
+            label="입금자 연락처"
+            value={senderUi.phone}
+            onChange={(phone) => setSenderUi((p) => ({ ...p, phone }))}
+          />
+        </Card>
+
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setSenderOpenUi((v) => !v)}
+              aria-expanded={senderOpenUi}
+              className="flex min-w-0 flex-1 items-center gap-1 text-left"
+            >
+              <h3 className="font-semibold">보내는 분 (선택)</h3>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-muted transition-transform ${senderOpenUi ? 'rotate-180' : ''}`}
+              />
+            </button>
+            <button
+              type="button"
+              onClick={() => setSameAsDepositorUi((v) => !v)}
+              className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium ${
+                sameAsDepositorUi ? 'border-primary bg-primary-light text-primary' : 'border-gray-200 text-muted'
+              }`}
+            >
+              입금자와 동일
+            </button>
+          </div>
+          {senderOpenUi && (
+            <>
+              <Input
+                form=""
+                label="보내는 분 (선택)"
+                placeholder="보내는 분 이름"
+                autoComplete="off"
+                value={senderUi.name}
+                onChange={(e) => setSenderUi((p) => ({ ...p, name: e.target.value }))}
+              />
+              <PhoneField
+                label="연락처 (선택)"
+                value={senderUi.senderPhone}
+                onChange={(senderPhone) => setSenderUi((p) => ({ ...p, senderPhone }))}
+              />
+              <div className="space-y-3">
+                <p className="text-xs font-medium text-muted">주소 (선택)</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant="secondary">
+                    <LocateFixed className="h-4 w-4" />
+                    현재 위치
+                  </Button>
+                  <Button type="button" variant="outline">
+                    <Search className="h-4 w-4" />
+                    주소 검색
+                  </Button>
+                </div>
+                <div className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left">
+                  <p className="flex items-center gap-2 text-sm text-muted">
+                    <MapPin className="h-4 w-4 shrink-0" />
+                    보내는 분 주소를 현재 위치 또는 검색으로 설정해 주세요
+                  </p>
+                </div>
+                <Input
+                  form=""
+                  label="상세주소 (선택)"
+                  placeholder="동·호수 등"
+                  autoComplete="off"
+                  value={senderUi.addressDetail}
+                  onChange={(e) => setSenderUi((p) => ({ ...p, addressDetail: e.target.value }))}
+                />
+              </div>
+            </>
+          )}
+        </Card>
+
+        <Card className="space-y-3">
           <h3 className="font-semibold">배송지</h3>
           {addresses.length > 0 && (
             <div className="space-y-2">
@@ -229,6 +326,7 @@ export function Checkout() {
               address: form.address,
               addressDetail: form.address_detail,
             }}
+            detailLabel="상세주소 (선택)"
             onChange={(next) => {
               if (next.address !== form.address || next.zonecode !== form.zonecode) {
                 setSelectedAddressId('new')
@@ -242,7 +340,7 @@ export function Checkout() {
             }}
           />
           <RequestMemoField
-            label="요청사항"
+            label="요청사항 (선택)"
             value={form.request_memo}
             onChange={(request_memo) => setForm((p) => ({ ...p, request_memo }))}
           />
