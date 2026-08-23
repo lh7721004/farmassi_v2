@@ -9,6 +9,8 @@ import {
   KPOST_DELIVERY_TYPES,
   KPOST_VOLUMES,
   KPOST_WEIGHTS,
+  kpostVolumeLabel,
+  kpostWeightLabel,
 } from '../../lib/kpostParcelExcel'
 import { PriceTag, discountRate } from './PriceTag'
 import { deletePublicImage, preparePublicImage, uploadFarmImage } from '../../lib/storageImages'
@@ -71,8 +73,12 @@ function normalizeUnit(unit: string | null | undefined, parcelWeight: string) {
   return weight ? unitFromWeight(weight) : raw
 }
 
+function withCurrentOption(options: readonly string[], current: string) {
+  return current && !options.includes(current) ? [current, ...options] : [...options]
+}
+
 function unitSelectOptions(current: string) {
-  return current && !UNIT_OPTIONS.includes(current) ? [current, ...UNIT_OPTIONS] : UNIT_OPTIONS
+  return withCurrentOption(UNIT_OPTIONS, current)
 }
 
 const emptyProductForm: ProductFormValues = {
@@ -240,16 +246,16 @@ function ProductFormCard({
             onChange('unit', unitFromWeight(weight))
           }}
         >
-          {KPOST_WEIGHTS.map((value) => (
+          {withCurrentOption(KPOST_WEIGHTS, form.parcel_weight_kg).map((value) => (
             <option key={value} value={value}>
-              {value}kg
+              {kpostWeightLabel(value)}
             </option>
           ))}
         </Select>
         <Select label="택배 부피(cm)" value={form.parcel_volume_cm} onChange={(e) => onChange('parcel_volume_cm', e.target.value)}>
-          {KPOST_VOLUMES.map((value) => (
+          {withCurrentOption(KPOST_VOLUMES, form.parcel_volume_cm).map((value) => (
             <option key={value} value={value}>
-              {value}cm
+              {kpostVolumeLabel(value)}
             </option>
           ))}
         </Select>
@@ -637,7 +643,7 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
               <PriceTag price={product.price} listPrice={product.list_price} />
             </p>
             <p className="text-xs text-muted">
-              {PRODUCT_SALE_STATUS_LABEL[productSaleStatus(product)]} · 택배 {product.parcel_weight_kg}kg · {product.parcel_volume_cm}cm
+              {PRODUCT_SALE_STATUS_LABEL[productSaleStatus(product)]} · 택배 {kpostWeightLabel(product.parcel_weight_kg)} · {kpostVolumeLabel(product.parcel_volume_cm)}
               · {product.parcel_content_code}
               {product.parcel_delivery_type ? ` · ${product.parcel_delivery_type}` : ''}
             </p>

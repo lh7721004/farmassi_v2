@@ -11,12 +11,13 @@ export type NotificationType = 'order_created' | 'deposit_confirmed' | 'shipment
 export type DepositProvider = 'manual' | 'gnd' | 'hecto' | 'banksalad' | 'codef' | 'bankda'
 export type ShipmentStatus = 'draft' | 'requested' | 'printed' | 'cancelled'
 export type MatchStatus = 'unmatched' | 'matched' | 'ignored'
-export type ProductSaleStatus = 'on_sale' | 'coming_soon' | 'sold_out' | 'hidden'
+export type ProductSaleStatus = 'on_sale' | 'coming_soon' | 'sold_out' | 'hidden' | 'inquiry'
 
 export const PRODUCT_SALE_STATUS_OPTIONS: { value: ProductSaleStatus; label: string }[] = [
   { value: 'on_sale', label: '판매중' },
   { value: 'coming_soon', label: '판매 예정' },
   { value: 'sold_out', label: '품절' },
+  { value: 'inquiry', label: '별도 문의' },
   { value: 'hidden', label: '숨김' },
 ]
 
@@ -24,6 +25,7 @@ export const PRODUCT_SALE_STATUS_LABEL: Record<ProductSaleStatus, string> = {
   on_sale: '판매중',
   coming_soon: '판매 예정',
   sold_out: '품절',
+  inquiry: '별도 문의',
   hidden: '숨김',
 }
 
