@@ -1,4 +1,5 @@
 import { sb } from '../sb.ts'
+import { sendOrderMail } from '../shared/mailer.ts'
 import { notifyFarmMembers } from '../shared/push.ts'
 import { randomCode, seoulDateCompact } from '../shared/util.ts'
 import { fail, ok, type FnHandler } from './types.ts'
@@ -39,9 +40,10 @@ export const createOrder: FnHandler = async ({ userId, body, admin }) => {
   })
   const total = lines.reduce((sum: number, line: any) => sum + line.line_amount, 0)
   const depositCode = randomCode(6)
+  const orderNo = `FA${seoulDateCompact()}-${randomCode(4)}`
 
   const { data: order, error: orderError } = await db.from('orders').insert({
-    order_no: `FA${seoulDateCompact()}-${randomCode(4)}`,
+    order_no: orderNo,
     farm_id: farm.id,
     customer_id: userId,
     status: 'pending_deposit',
@@ -81,6 +83,21 @@ export const createOrder: FnHandler = async ({ userId, body, admin }) => {
   } else if (body.saveAddress) {
     await db.from('saved_addresses').insert({ ...savedPayload, user_id: userId, is_default: true })
   }
+
+  // 메일과 푸시를 함께 보낸다. 푸시는 브라우저 구독이 있어야 도착하는데,
+  // 관리자가 구독하지 않은 채로 주문을 놓치는 일이 실제로 있었다.
+  await sendOrderMail({
+    orderNo: orderNo,
+    farmName: farm.name,
+    amount: total,
+    depositCode,
+    recipientName: body.recipient.name,
+    recipientPhone: body.recipient.phone,
+    address: [body.recipient.zonecode ? `[${body.recipient.zonecode}]` : '', body.recipient.address,
+              body.recipient.addressDetail].filter(Boolean).join(' '),
+    items: lines.map((line: any) => ({ name: line.product_name, quantity: line.quantity })),
+    memo: body.requestMemo,
+  })
 
   await notifyFarmMembers(admin, {
     farmId: farm.id,
