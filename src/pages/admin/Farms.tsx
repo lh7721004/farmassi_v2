@@ -6,6 +6,8 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Input, Textarea } from '../../components/ui/Field'
+import { DeliveryDaysField } from '../../components/shared/DeliveryDaysField'
+import { normalizeDeliveryDays } from '../../lib/deliveryDays'
 import { PhoneField } from '../../components/ui/PhoneField'
 import { ErrorText } from '../../components/ui/Feedback'
 import {
@@ -52,6 +54,7 @@ interface FarmForm {
   account_holder: string
   owner_user_id: string
   is_active: boolean
+  delivery_days: number[]
 }
 
 const emptyForm: FarmForm = {
@@ -73,6 +76,7 @@ const emptyForm: FarmForm = {
   account_holder: '',
   owner_user_id: '',
   is_active: true,
+  delivery_days: [],
 }
 
 const RESERVED_SLUGS = new Set([
@@ -221,6 +225,7 @@ export function AdminFarms() {
         bank_name: form.bank_name.trim(),
         account_number: form.account_number.trim(),
         account_holder: form.account_holder.trim(),
+        delivery_days: form.delivery_days,
         is_active: form.is_active,
       })
       .select('id')
@@ -422,6 +427,10 @@ export function AdminFarms() {
               onChange={(e) => setForm((prev) => ({ ...prev, kakao_channel_url: e.target.value }))}
               placeholder="https://pf.kakao.com/_xxxxx"
             />
+            <DeliveryDaysField
+              value={form.delivery_days}
+              onChange={(delivery_days) => setForm((prev) => ({ ...prev, delivery_days }))}
+            />
             <BankField
               value={form.bank_name}
               onChange={(bank_name) => setForm((prev) => ({ ...prev, bank_name }))}
@@ -554,6 +563,10 @@ export function AdminFarms() {
                   onChange={(e) => setEditing({ ...editing, kakao_channel_url: e.target.value })}
                   placeholder="https://pf.kakao.com/_xxxxx"
                 />
+                <DeliveryDaysField
+                  value={editing.delivery_days ?? []}
+                  onChange={(delivery_days) => setEditing({ ...editing, delivery_days })}
+                />
                 <BankField
                   value={editing.bank_name}
                   onChange={(bank_name) => setEditing({ ...editing, bank_name })}
@@ -619,6 +632,7 @@ export function AdminFarms() {
                             bank_name: editing.bank_name,
                             account_number: editing.account_number,
                             account_holder: editing.account_holder,
+                            delivery_days: normalizeDeliveryDays(editing.delivery_days),
                           })
                           .eq('id', farm.id)
                         if (updateError) {

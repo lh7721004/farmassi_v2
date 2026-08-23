@@ -79,6 +79,8 @@ export interface Farm {
   is_active: boolean
   /** 메인 농가 목록 노출 여부. false 여도 slug 주소로는 들어갈 수 있다. */
   is_listed: boolean
+  /** 배송 가능 요일 (0=일 … 6=토). 빈 배열이면 설정 안 함. */
+  delivery_days: number[]
   created_at: string
   updated_at: string
 }

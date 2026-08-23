@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { DeliveryEstimate } from '../../components/shared/DeliveryEstimate'
 import { Header } from '../../components/layout/Header'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -257,6 +258,8 @@ export function Checkout() {
             </label>
           )}
         </Card>
+
+        <DeliveryEstimate days={farm.delivery_days} />
 
         <Card className="bg-primary-light border-primary/20">
           <p className="text-sm text-gray-800">
