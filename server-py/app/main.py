@@ -5,6 +5,7 @@ Node 서버(server/)를 옮기는 중이다. 두 서버가 동시에 떠 있어�
 경로별로 nginx 에서 넘긴다. 응답 형태는 Node 쪽과 같아야 한다 —
 프론트가 그 형태에 맞춰져 있고 거슬러 올라가면 PostgREST 형식이다.
 """
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
@@ -13,6 +14,7 @@ from fastapi.responses import JSONResponse
 from . import db
 from .config import config
 from .jwt_session import verify
+from .functions import FUNCTIONS, FnCtx
 from .query import run_query
 from .version import VERSION
 
@@ -93,3 +95,21 @@ async def query(request: Request, uid: str | None = Depends(user_id)):
     async with db.with_user(uid) as conn:
         result = await run_query(conn, body)
     return {"data": result.data, "count": result.count, "error": None}
+
+
+@app.post("/rpc/{name}")
+async def rpc(name: str, request: Request, uid: str | None = Depends(user_id)):
+    """Edge Function 대체. 이름은 그대로 유지한다."""
+    handler = FUNCTIONS.get(name)
+    if handler is None:
+        return JSONResponse({"error": f"없는 함수: {name}"}, status_code=404)
+
+    body = await request.json() if await request.body() else {}
+    # 크론은 시크릿 헤더로 들어온다. 로그인 없이 실행할 수 있는 유일한 경로.
+    cron_secret = os.environ.get("CRON_SECRET")
+    if cron_secret and request.headers.get("x-cron-secret") == cron_secret:
+        body["__byCron"] = True
+
+    async with db.with_admin() as conn:
+        result = await handler(FnCtx(user_id=uid, body=body, admin=conn))
+    return JSONResponse(result.body, status_code=result.status)
