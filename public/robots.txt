@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# 관리자·개인 화면은 색인하지 않는다.
+Disallow: /admin
+Disallow: /me
+Disallow: /auth
