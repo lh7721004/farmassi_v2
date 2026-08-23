@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
 
+/** 빌드 시점에 vite 가 넣는 값 (vite.config.ts 의 define). */
+declare const __APP_VERSION__: string
+declare const __APP_COMMIT__: string
+
 interface ImportMetaEnv {
   readonly VITE_SITE_URL: string
   readonly VITE_API_URL: string
