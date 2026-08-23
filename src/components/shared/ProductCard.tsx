@@ -5,7 +5,8 @@ import {
   productSaleStatus,
   type Product,
 } from '../../types/models'
-import { formatPrice, productGradient } from '../../lib/format'
+import { productGradient } from '../../lib/format'
+import { PriceTag } from './PriceTag'
 import { Card } from '../ui/Card'
 
 interface ProductCardProps {
@@ -76,7 +77,9 @@ export function ProductCard({ product, quantity = 0, onChangeQuantity, extra }: 
       </div>
       <div className="flex flex-1 flex-col p-4">
         <FitTwoLineTitle text={product.name} />
-        <p className="mt-2 text-lg font-bold text-primary">{formatPrice(product.price)}</p>
+        <p className="mt-2 text-lg font-bold text-primary">
+          <PriceTag price={product.price} listPrice={product.list_price} />
+        </p>
         {extra}
         {!extra && onChangeQuantity && canOrder && (
           <div className="mt-3 flex items-center justify-between">

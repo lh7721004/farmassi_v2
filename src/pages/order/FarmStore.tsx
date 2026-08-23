@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Header } from '../../components/layout/Header'
 import { useLoginSheet } from '../../components/auth/LoginSheet'
+import { DeliveryEstimate } from '../../components/shared/DeliveryEstimate'
 import { KakaoChannelButton } from '../../components/shared/KakaoChannelButton'
 import { ProductCard } from '../../components/shared/ProductCard'
 import { Button } from '../../components/ui/Button'
@@ -103,6 +104,7 @@ export function FarmStore() {
             <p className="text-sm text-gray-700">{farm.description || farm.product_summary}</p>
           </Card>
         ) : null}
+        <DeliveryEstimate days={farm.delivery_days} />
         {products.length === 0 ? (
           <p className="text-center text-muted py-10">판매 중인 상품이 없습니다</p>
         ) : (

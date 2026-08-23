@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch --experimental-strip-types src/index.ts",
-    "start": "node --experimental-strip-types src/index.ts"
+    "start": "node --experimental-strip-types src/index.ts",
+    "ops": "node --env-file=.env.ops --experimental-strip-types ops/index.ts"
   },
   "dependencies": {
     "nodemailer": "^9.0.5",

@@ -3,6 +3,7 @@ import type { OrderStatus } from './models'
 export interface OrderListModel {
   id: string
   customerName: string
+  customerPhone?: string | null
   productSummary: string
   amount: number
   address: string

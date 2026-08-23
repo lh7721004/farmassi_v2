@@ -45,6 +45,7 @@ export function toOrderListModel(order: OrderRow): OrderListModel {
   return {
     id: order.id,
     customerName: order.recipient_name,
+    customerPhone: order.recipient_phone,
     productSummary: items.map((item) => `${item.product_name} ×${item.quantity}`).join(', ') || '상품',
     amount: order.total_amount,
     address: fullAddress(order.address, order.address_detail, order.zonecode),

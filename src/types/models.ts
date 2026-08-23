@@ -79,6 +79,8 @@ export interface Farm {
   is_active: boolean
   /** 메인 농가 목록 노출 여부. false 여도 slug 주소로는 들어갈 수 있다. */
   is_listed: boolean
+  /** 배송 가능 요일 (0=일 … 6=토). 빈 배열이면 설정 안 함. */
+  delivery_days: number[]
   created_at: string
   updated_at: string
 }
@@ -94,7 +96,10 @@ export interface Product {
   id: string
   farm_id: string
   name: string
+  /** 실제로 받는 금액. 주문 금액 계산은 전부 이 값을 쓴다. */
   price: number
+  /** 할인 전 원래 가격. price 보다 클 때만 취소선으로 표시한다. */
+  list_price: number | null
   unit: string | null
   description: string | null
   image_url: string | null
