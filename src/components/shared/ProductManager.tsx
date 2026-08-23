@@ -1,4 +1,4 @@
-import { GripVertical, ImagePlus, Plus, X } from 'lucide-react'
+import { GripVertical, ImagePlus, Import, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
@@ -21,6 +21,7 @@ import {
   type ProductSaleStatus,
 } from '../../types/models'
 import { ProductCard } from './ProductCard'
+import { ProductImportDialog } from './ProductImportDialog'
 
 function ImageFileInput({ onPick }: { onPick: (file: File) => void }) {
   return (
@@ -338,6 +339,7 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imageRemoved, setImageRemoved] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const productsRef = useRef(products)
   const dragIdRef = useRef<string | null>(null)
   productsRef.current = products
@@ -535,10 +537,16 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <Button onClick={toggleAdd} disabled={reordering}>
-            <Plus className="h-4 w-4" />
-            새 상품 추가
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={toggleAdd} disabled={reordering}>
+              <Plus className="h-4 w-4" />
+              새 상품 추가
+            </Button>
+            <Button type="button" variant="outline" disabled={reordering} onClick={() => setImportOpen(true)}>
+              <Import className="h-4 w-4" />
+              불러오기
+            </Button>
+          </div>
           {products.length > 1 && (
             <Button variant={reordering ? 'primary' : 'outline'} onClick={toggleReorder}>
               {reordering ? '완료' : '순서 변경'}
@@ -611,6 +619,7 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
             })}
           </div>
         )}
+        <ProductImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
       </div>
     )
   }
