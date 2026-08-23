@@ -1,11 +1,16 @@
+import { Phone } from 'lucide-react'
 import { kakaoChannelChatHref } from '../../lib/format'
+import { telHref } from '../../lib/farmShareText'
 
 interface KakaoChannelButtonProps {
   href: string
   label?: string
 }
 
-export function KakaoChannelButton({ href, label = '카카오톡 채널로 연결' }: KakaoChannelButtonProps) {
+const inquiryBtnClass =
+  'flex h-[45px] w-full min-w-0 items-center justify-center gap-1.5 rounded-[12px] px-2 text-[15px] font-medium sm:flex-1'
+
+export function KakaoChannelButton({ href, label = '카카오톡 문의' }: KakaoChannelButtonProps) {
   const chatHref = kakaoChannelChatHref(href)
   if (!chatHref) return null
   return (
@@ -13,13 +18,47 @@ export function KakaoChannelButton({ href, label = '카카오톡 채널로 연�
       href={chatHref}
       target="_blank"
       rel="noopener noreferrer"
-      className="relative flex h-[45px] w-full items-center justify-center rounded-[12px] bg-[#FEE500] text-[15px] font-medium text-black/85 hover:bg-[#F5DC00]"
+      className={`${inquiryBtnClass} bg-[#FEE500] text-black/85 hover:bg-[#F5DC00]`}
     >
-      <span className="absolute left-3.5 flex size-[18px] items-center justify-center">
+      <span className="flex size-[18px] shrink-0 items-center justify-center">
         <KakaoSymbol />
       </span>
-      {label}
+      <span className="truncate">{label}</span>
     </a>
+  )
+}
+
+export function PhoneInquiryButton({ phone, label = '전화문의' }: { phone: string; label?: string }) {
+  const href = telHref(phone)
+  if (!href) return null
+  return (
+    <a
+      href={href}
+      className={`${inquiryBtnClass} border-2 border-primary bg-primary-light text-primary hover:bg-white`}
+    >
+      <Phone className="size-[18px] shrink-0" />
+      <span className="truncate">{label}</span>
+    </a>
+  )
+}
+
+export function FarmInquiryButtons({
+  kakaoChannelUrl,
+  phone,
+  mobilePhone,
+}: {
+  kakaoChannelUrl?: string | null
+  phone?: string | null
+  mobilePhone?: string | null
+}) {
+  const chatHref = kakaoChannelChatHref(kakaoChannelUrl)
+  const callPhone = mobilePhone?.trim() || phone?.trim() || null
+  if (!chatHref && !callPhone) return null
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row">
+      {chatHref ? <KakaoChannelButton href={chatHref} /> : null}
+      {callPhone ? <PhoneInquiryButton phone={callPhone} /> : null}
+    </div>
   )
 }
 
