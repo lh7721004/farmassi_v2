@@ -14,8 +14,11 @@ export const createOrder: FnHandler = async ({ userId, body, admin }) => {
 
   const db = sb(admin)
   const { data: farm } = await db.from('farms').select('*')
-    .eq('id', body.farmId).eq('is_active', true).maybeSingle()
+    .eq('id', body.farmId).maybeSingle()
   if (!farm) return fail('농가를 찾을 수 없습니다.', 404)
+  // 비활성 농가는 화면은 열려 있지만 주문은 받지 않는다.
+  // "찾을 수 없다" 고 하면 사용자가 주소를 잘못 눌렀다고 오해한다.
+  if (!farm.is_active) return fail('이 농가는 지금 주문을 받지 않습니다.', 409)
 
   const { data: products } = await db.from('products').select('*')
     .eq('farm_id', farm.id).eq('sale_status', 'on_sale')

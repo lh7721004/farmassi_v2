@@ -24,7 +24,6 @@ export function FarmLanding() {
       .from('farms')
       .select('*')
       .eq('slug', farmSlug)
-      .eq('is_active', true)
       .maybeSingle()
       .then(({ data }) => {
         const row = (data as Farm | null) ?? null
@@ -109,11 +108,22 @@ export function FarmLanding() {
           </Card>
         ) : null}
 
-        <Link to={`/farm/${farm.slug}`} className="block">
-          <Button size="lg" fullWidth>
-            주문하기
-          </Button>
-        </Link>
+        {farm.is_active ? (
+          <Link to={`/farm/${farm.slug}`} className="block">
+            <Button size="lg" fullWidth>
+              주문하기
+            </Button>
+          </Link>
+        ) : (
+          <>
+            <Button size="lg" fullWidth disabled>
+              지금은 주문을 받지 않습니다
+            </Button>
+            <Link to={`/farm/${farm.slug}`} className="block text-center text-sm text-primary">
+              상품 둘러보기
+            </Link>
+          </>
+        )}
       </div>
     </div>
   )

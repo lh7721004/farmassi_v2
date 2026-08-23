@@ -265,8 +265,8 @@ export function Checkout() {
         </Card>
 
         <ErrorText>{error}</ErrorText>
-        <Button type="submit" fullWidth size="lg" disabled={pending}>
-          {formatPrice(total)} 주문하기
+        <Button type="submit" fullWidth size="lg" disabled={pending || !farm?.is_active}>
+          {!farm?.is_active ? '지금은 주문을 받지 않습니다' : `${formatPrice(total)} 주문하기`}
         </Button>
       </form>
     </div>

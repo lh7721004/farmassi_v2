@@ -5,6 +5,7 @@ import { bankdaOtt } from './bankdaOtt.ts'
 import { confirmDeposit } from './confirmDeposit.ts'
 import { createOrder } from './createOrder.ts'
 import { kpostShipment } from './kpostShipment.ts'
+import { matchDeposit } from './matchDeposit.ts'
 import { naverAddress } from './naverAddress.ts'
 import { scrapeDeposits } from './scrapeDeposits.ts'
 import { sendPushFn } from './sendPushFn.ts'
@@ -17,6 +18,7 @@ export const functions: Record<string, FnHandler> = {
   'confirm-deposit': confirmDeposit,
   'create-order': createOrder,
   'kpost-shipment': kpostShipment,
+  'match-deposit': matchDeposit,
   'naver-address': naverAddress,
   'scrape-deposits': scrapeDeposits,
   'send-push': sendPushFn,

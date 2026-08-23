@@ -18,7 +18,7 @@ export const bankdaAccountStatus: FnHandler = async ({ userId, body, admin }) =>
   if (!farmId) return fail('farmId 가 필요합니다.')
 
   const { data: farm } = await sb(admin).from('farms')
-    .select('id, account_number, bankda_merchant_email').eq('id', farmId).maybeSingle()
+    .select('id, account_number').eq('id', farmId).maybeSingle()
   if (!farm) return fail('농가를 찾을 수 없습니다.', 404)
 
   const mainEmail = process.env.BANKDA_EMAIL
@@ -29,9 +29,11 @@ export const bankdaAccountStatus: FnHandler = async ({ userId, body, admin }) =>
 
   try {
     // 이 농가의 가맹점에 붙은 계좌.
-    const owned = farm.bankda_merchant_email
-      ? await listMerchantAccounts(mainEmail, farm.bankda_merchant_email)
-      : []
+    const merchant = await admin.query(
+      'select email from private.bankda_merchant where farm_id = $1', [farmId])
+    const merchantEmail: string | null = merchant.rows[0]?.email ?? null
+
+    const owned = merchantEmail ? await listMerchantAccounts(mainEmail, merchantEmail) : []
 
     // 가맹점을 나누기 전에 등록한 계좌는 다른 가맹점 아래에 있다. 계좌번호로도 찾는다.
     // 화면이 답해야 하는 질문은 "이 농가 계좌가 뱅크다에 연결됐나" 이지

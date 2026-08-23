@@ -46,11 +46,16 @@ export const bankdaOtt: FnHandler = async ({ userId, body, admin }) => {
 
   const db = sb(admin)
   const { data: farm } = await db.from('farms')
-    .select('id, name, bankda_merchant_email').eq('id', farmId).maybeSingle()
+    .select('id, name').eq('id', farmId).maybeSingle()
   if (!farm) return fail('농가를 찾을 수 없습니다.', 404)
 
+  // 가맹점 정보는 private 스키마에만 둔다. farms 는 손님도 읽는 테이블이다.
+  const existing = await admin.query(
+    'select email from private.bankda_merchant where farm_id = $1', [farmId])
+  const known: string | null = existing.rows[0]?.email ?? null
+
   try {
-    let merchantEmail: string = farm.bankda_merchant_email
+    let merchantEmail = known ?? ''
 
     if (!merchantEmail) {
       merchantEmail = merchantEmailFor(farmId)
@@ -71,7 +76,6 @@ export const bankdaOtt: FnHandler = async ({ userId, body, admin }) => {
          on conflict (farm_id) do update set email = excluded.email, password = excluded.password`,
         [farmId, merchantEmail, password],
       )
-      await db.from('farms').update({ bankda_merchant_email: merchantEmail }).eq('id', farmId)
     }
 
     // 이미 등록된 계좌를 바꾸는 경우에는 수정용 OTT 를 쓴다.
@@ -87,7 +91,7 @@ export const bankdaOtt: FnHandler = async ({ userId, body, admin }) => {
       expiresIn: ott.expiresIn,
       merchantEmail,
       farmName: farm.name,
-      createdMerchant: !farm.bankda_merchant_email,
+      createdMerchant: !known,
     })
   } catch (error) {
     if (error instanceof BankdaError) return fail(error.message, 502)

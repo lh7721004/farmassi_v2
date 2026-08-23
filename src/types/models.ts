@@ -77,6 +77,8 @@ export interface Farm {
   account_number: string
   account_holder: string
   is_active: boolean
+  /** 메인 농가 목록 노출 여부. false 여도 slug 주소로는 들어갈 수 있다. */
+  is_listed: boolean
   created_at: string
   updated_at: string
 }

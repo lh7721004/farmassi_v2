@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { AppShell } from '../../components/layout/AppShell'
 import { Header } from '../../components/layout/Header'
@@ -42,6 +43,18 @@ export function AdminDeposits() {
   return (
     <AppShell navItems={adminNavItems} roleLabel="관리자" settingsPath="/admin/none">
       <Header title="입금 확인" subtitle={`${visible.length}건 대기`} />
+      <div className="px-4 pt-4 md:px-6 max-w-3xl mx-auto">
+        <Link
+          to="/admin/deposits/ledger"
+          className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3"
+        >
+          <span className="text-sm text-gray-900">
+            입금 내역 원장
+            <span className="ml-2 text-xs text-muted">자동으로 붙지 않은 입금 직접 연결</span>
+          </span>
+          <span className="text-sm font-semibold text-primary">열기</span>
+        </Link>
+      </div>
       <div className="px-4 py-4 md:px-6 max-w-5xl mx-auto space-y-4">
         <FarmFilterChips farms={farms} selectedId={farmId} onSelect={setFarmId} allCount={orders.length} />
         {groups.map((group) => (

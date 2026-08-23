@@ -26,7 +26,8 @@ export function FarmStore() {
   useEffect(() => {
     setCartState(getCart(farmSlug))
     async function load() {
-      const { data: farmRow } = await supabase.from('farms').select('*').eq('slug', farmSlug).eq('is_active', true).maybeSingle()
+      // 비활성 농가도 화면은 열어 준다. 주문만 막는다(아래 orderingClosed).
+      const { data: farmRow } = await supabase.from('farms').select('*').eq('slug', farmSlug).maybeSingle()
       if (!farmRow) {
         setFarm(null)
         setLoading(false)
@@ -45,6 +46,9 @@ export function FarmStore() {
     }
     void load()
   }, [farmSlug])
+
+  // 농가가 비활성이면 담기·주문을 막는다. 구경과 문의는 그대로 가능하다.
+  const orderingClosed = Boolean(farm && !farm.is_active)
 
   const qtyById = useMemo(() => Object.fromEntries(cart.map((item) => [item.productId, item.quantity])), [cart])
   const selected = products.filter((product) => isProductOrderable(product) && (qtyById[product.id] ?? 0) > 0)
@@ -114,7 +118,15 @@ export function FarmStore() {
           </div>
         )}
       </div>
-      {selectedCount > 0 && (
+      {orderingClosed && (
+        <div className="mx-4 mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-semibold text-amber-900">지금은 주문을 받지 않습니다</p>
+          <p className="mt-1 text-xs text-amber-800">
+            상품과 농가 정보는 그대로 보실 수 있습니다. 주문은 잠시 멈춰 있습니다.
+          </p>
+        </div>
+      )}
+      {!orderingClosed && selectedCount > 0 && (
         <div className="fixed bottom-0 left-0 right-0 border-t border-gray-100 bg-white p-4">
           <div className="max-w-5xl mx-auto flex items-center gap-3">
             <div className="flex-1">

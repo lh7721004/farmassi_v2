@@ -20,8 +20,10 @@ import { FarmDelivery } from './pages/farm/Delivery'
 import { FarmProducts } from './pages/farm/Products'
 import { FarmSettings } from './pages/farm/Settings'
 import { AdminDashboard } from './pages/admin/Dashboard'
+import { AdminContract } from './pages/admin/Contract'
 import { AdminFarms } from './pages/admin/Farms'
 import { AdminOrders } from './pages/admin/Orders'
+import { AdminDepositLedger } from './pages/admin/DepositLedger'
 import { AdminDeposits } from './pages/admin/Deposits'
 import { AdminShipments } from './pages/admin/Shipments'
 
@@ -92,6 +94,22 @@ export default function App() {
           element={
             <RequireAdmin>
               <AdminDashboard />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/admin/contract"
+          element={
+            <RequireAdmin>
+              <AdminContract />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/admin/deposits/ledger"
+          element={
+            <RequireAdmin>
+              <AdminDepositLedger />
             </RequireAdmin>
           }
         />

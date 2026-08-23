@@ -5,7 +5,7 @@ import { Header } from '../../components/layout/Header'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
-import { Input, Select, Textarea } from '../../components/ui/Field'
+import { Input, Textarea } from '../../components/ui/Field'
 import { PhoneField } from '../../components/ui/PhoneField'
 import { ErrorText } from '../../components/ui/Feedback'
 import {
@@ -17,6 +17,12 @@ import {
   type LandingBlockDraft,
 } from '../../components/shared/LandingBlocksField'
 import { AddressPicker } from '../../components/shared/AddressPicker'
+import {
+  AccountPicker,
+  BankField,
+  profileLabel,
+  type ProfileOption,
+} from '../../components/shared/FarmContractFields'
 import { BankdaAccountLink } from '../../components/shared/BankdaAccountLink'
 import { FarmSharePreview } from '../../components/shared/FarmSharePreview'
 import { adminNavItems } from '../../config/adminNav'
@@ -24,9 +30,8 @@ import { kakaoChannelHref, safeHttpUrl } from '../../lib/format'
 import { farmLandingPath, resolveFarmShareText } from '../../lib/farmShareText'
 import { toSlug } from '../../lib/slug'
 import { supabase } from '../../lib/supabase'
-import { parseLandingBlocks, type Farm, type Profile } from '../../types/models'
+import { parseLandingBlocks, type Farm } from '../../types/models'
 
-type ProfileOption = Pick<Profile, 'id' | 'display_name' | 'phone' | 'avatar_url'>
 
 interface FarmForm {
   name: string
@@ -87,32 +92,7 @@ const RESERVED_SLUGS = new Set([
   'store',
 ])
 
-const BANKS = [
-  '국민은행',
-  '신한은행',
-  '우리은행',
-  '하나은행',
-  'NH농협은행',
-  '기업은행',
-  '카카오뱅크',
-  '토스뱅크',
-  '케이뱅크',
-  '부산은행',
-  'iM뱅크',
-  '경남은행',
-  '광주은행',
-  '전북은행',
-  '제주은행',
-  '수협은행',
-  'SC제일은행',
-  '한국씨티은행',
-  '산업은행',
-  '우체국',
-  '새마을금고',
-  '신협',
-] as const
 
-const BANK_CUSTOM = '__custom__'
 
 const farmAddressPickerCopy = {
   emptyHint: '농가 위치를 현재 위치 또는 검색으로 설정해 주세요',
@@ -120,52 +100,6 @@ const farmAddressPickerCopy = {
   detailPlaceholder: '건물명, 동·호수 등',
 } as const
 
-function BankField({
-  value,
-  onChange,
-  required,
-}: {
-  value: string
-  onChange: (value: string) => void
-  required?: boolean
-}) {
-  const listed = BANKS.includes(value as (typeof BANKS)[number])
-  const selectValue = listed ? value : BANK_CUSTOM
-
-  return (
-    <div className="space-y-2">
-      <Select
-        label="은행"
-        value={selectValue}
-        onChange={(e) => {
-          const next = e.target.value
-          if (next === BANK_CUSTOM) {
-            onChange(listed ? '' : value)
-            return
-          }
-          onChange(next)
-        }}
-        required={required}
-      >
-        <option value={BANK_CUSTOM}>직접입력</option>
-        {BANKS.map((bank) => (
-          <option key={bank} value={bank}>
-            {bank}
-          </option>
-        ))}
-      </Select>
-      {selectValue === BANK_CUSTOM && (
-        <Input
-          label="은행명"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="은행명을 입력하세요"
-          required={required}
-        />
-      )}
-    </div>
-  )
-}
 
 function uniqueSlug(name: string, taken: Set<string>, current?: string) {
   const base = toSlug(name) || 'farm'
@@ -174,79 +108,7 @@ function uniqueSlug(name: string, taken: Set<string>, current?: string) {
   return `${base}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-function profileLabel(profile: ProfileOption | undefined) {
-  if (!profile) return '미지정'
-  const name = profile.display_name?.trim() || '이름 없음'
-  return profile.phone ? `${name} · ${profile.phone}` : name
-}
 
-function AccountPicker({
-  profiles,
-  selectedId,
-  onSelect,
-  label = '담당 계정',
-}: {
-  profiles: ProfileOption[]
-  selectedId: string
-  onSelect: (id: string) => void
-  label?: string
-}) {
-  const [query, setQuery] = useState('')
-  const selected = profiles.find((p) => p.id === selectedId)
-  const q = query.trim().toLowerCase()
-  const matches = useMemo(() => {
-    const list = q
-      ? profiles.filter((p) => {
-          const name = (p.display_name ?? '').toLowerCase()
-          const phone = (p.phone ?? '').replace(/\s/g, '')
-          const id = p.id.toLowerCase()
-          return name.includes(q) || phone.includes(q.replace(/\s/g, '')) || id.includes(q)
-        })
-      : profiles
-    return list.slice(0, 8)
-  }, [profiles, q])
-
-  return (
-    <div className="space-y-2">
-      <Input
-        label={label}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="이름, 연락처, 또는 계정 ID"
-      />
-      {selected && (
-        <div className="flex items-center justify-between gap-2 rounded-xl bg-primary-light px-3 py-2 text-sm">
-          <span className="font-medium text-primary">{profileLabel(selected)}</span>
-          <button type="button" className="text-xs text-muted" onClick={() => onSelect('')}>
-            해제
-          </button>
-        </div>
-      )}
-      {matches.length > 0 ? (
-        <ul className="max-h-48 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100">
-          {matches.map((profile) => (
-            <li key={profile.id}>
-              <button
-                type="button"
-                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 ${
-                  profile.id === selectedId ? 'bg-primary-light font-medium' : ''
-                }`}
-                onClick={() => {
-                  onSelect(profile.id)
-                  setQuery('')
-                }}
-              >
-                {profileLabel(profile)}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-xs text-muted">{q ? '일치하는 계정이 없습니다.' : '카카오로 로그인한 계정 목록입니다.'}</p>
-      )}
-    </div>
-  )
-}
 
 export function AdminFarms() {
   const navigate = useNavigate()
