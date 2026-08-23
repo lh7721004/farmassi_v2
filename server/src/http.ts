@@ -22,7 +22,7 @@ export function send(res: ServerResponse, status: number, payload: unknown): voi
 export function cors(req: IncomingMessage, res: ServerResponse): void {
   const origin = req.headers.origin
   // 브라우저가 자격증명을 보내야 하므로 * 를 쓸 수 없다. 허용한 출처만 그대로 돌려준다.
-  if (origin && (origin === config.siteOrigin || origin.startsWith('http://localhost'))) {
+  if (origin && (config.siteOrigins.includes(origin) || origin.startsWith('http://localhost'))) {
     res.setHeader('Access-Control-Allow-Origin', origin)
     res.setHeader('Vary', 'Origin')
     res.setHeader('Access-Control-Allow-Credentials', 'true')

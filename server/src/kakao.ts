@@ -40,7 +40,7 @@ function safeRedirect(raw: string | null): string {
   if (!raw) return fallback
   try {
     const url = new URL(raw)
-    const allowed = url.origin === config.siteOrigin || url.hostname === 'localhost'
+    const allowed = config.siteOrigins.includes(url.origin) || url.hostname === 'localhost'
     return allowed ? url.toString() : fallback
   } catch {
     return fallback

@@ -27,7 +27,20 @@ export const config = {
     redirectUri: optional('KAKAO_REDIRECT_URI', 'https://api.shop.lkim.me/auth/kakao/callback'),
   },
 
-  siteOrigin: optional('SITE_ORIGIN', 'https://shop.lkim.me'),
+  /**
+   * 허용할 프론트 출처. 쉼표로 여러 개를 넣을 수 있다.
+   * 도메인을 옮기는 동안 옛 주소와 새 주소가 함께 동작해야 하기 때문이다.
+   * 첫 번째 값이 대표 주소로, 돌아갈 곳을 못 정했을 때 쓰인다.
+   */
+  get siteOrigins(): string[] {
+    return optional('SITE_ORIGIN', 'https://shop.lkim.me')
+      .split(',')
+      .map((value) => value.trim().replace(/\/+$/, ''))
+      .filter(Boolean)
+  },
+  get siteOrigin(): string {
+    return this.siteOrigins[0]
+  },
   uploadDir: optional('UPLOAD_DIR', '/opt/homebrew/var/www/shop-uploads'),
   publicUploadBase: optional('PUBLIC_UPLOAD_BASE', 'https://api.shop.lkim.me/files'),
 }
