@@ -2,11 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>me.lkim.farmassi-api</string>
+  <key>Label</key><string>me.lkim.farmassi-api-dev</string>
   <key>ProgramArguments</key>
   <array>
     <string>/Users/lkim/FetchAccount/nh_agtech/server-py/run.sh</string>
-    <string>/Users/lkim/FetchAccount/nh_agtech/server/.env</string>
+    <string>/Users/lkim/FetchAccount/nh_agtech/server/.env.dev</string>
   </array>
   <key>WorkingDirectory</key><string>/Users/lkim/FetchAccount/nh_agtech/server-py</string>
   <key>EnvironmentVariables</key>
@@ -15,7 +15,7 @@
   </dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
-  <key>StandardOutPath</key><string>/Users/lkim/FetchAccount/nh_agtech/server-py/api.log</string>
-  <key>StandardErrorPath</key><string>/Users/lkim/FetchAccount/nh_agtech/server-py/api.err.log</string>
+  <key>StandardOutPath</key><string>/Users/lkim/FetchAccount/nh_agtech/server-py/api-dev.log</string>
+  <key>StandardErrorPath</key><string>/Users/lkim/FetchAccount/nh_agtech/server-py/api-dev.err.log</string>
 </dict>
 </plist>

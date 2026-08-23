@@ -16,7 +16,8 @@ def optional(name: str, fallback: str) -> str:
 class Config:
     @property
     def port(self) -> int:
-        return int(optional("PY_PORT", "4320"))
+        # Node 서버와 같은 이름을 쓴다. 전환할 때 .env 를 그대로 쓰기 위해서다.
+        return int(optional("PORT", "4310"))
 
     # app   : RLS 가 적용되는 역할. 사용자 요청 처리용.
     # admin : RLS 를 우회하는 역할. 서버 내부 작업용.
