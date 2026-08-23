@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Header } from '../../components/layout/Header'
 import { useLoginSheet } from '../../components/auth/LoginSheet'
 import { FarmInquiryButtons } from '../../components/shared/KakaoChannelButton'
 import { ProductCard } from '../../components/shared/ProductCard'
+import { ShippingScheduleNotice } from '../../components/shared/ShippingScheduleNotice'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageSpinner } from '../../components/ui/Feedback'
@@ -16,7 +17,7 @@ import { isProductOrderable, type Farm, type Product } from '../../types/models'
 export function FarmStore() {
   const { farmSlug = '' } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const { openLogin } = useLoginSheet()
   const [farm, setFarm] = useState<Farm | null>(null)
   const [products, setProducts] = useState<Product[]>([])
@@ -84,16 +85,23 @@ export function FarmStore() {
         showBack
         backTo={`/farm/${farmSlug}/landingpage`}
         rightElement={
-          <button
-            type="button"
-            className="text-sm font-medium text-primary"
-            onClick={() => {
-              if (user) navigate('/me/orders')
-              else openLogin({ next: '/me/orders' })
-            }}
-          >
-            내 주문
-          </button>
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Link to="/admin/farms" className="text-sm font-medium text-muted hover:text-gray-900">
+                관리자 페이지
+              </Link>
+            )}
+            <button
+              type="button"
+              className="text-sm font-medium text-primary"
+              onClick={() => {
+                if (user) navigate('/me/orders')
+                else openLogin({ next: '/me/orders' })
+              }}
+            >
+              내 주문
+            </button>
+          </div>
         }
       />
       <div className="px-4 py-4 md:px-6 max-w-5xl mx-auto space-y-4">
@@ -108,6 +116,7 @@ export function FarmStore() {
             <p className="text-sm text-gray-700">{farm.description || farm.product_summary}</p>
           </Card>
         ) : null}
+        <ShippingScheduleNotice />
         {products.length === 0 ? (
           <p className="text-center text-muted py-10">판매 중인 상품이 없습니다</p>
         ) : (

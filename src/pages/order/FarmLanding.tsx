@@ -13,7 +13,7 @@ import { parseLandingBlocks, type Farm } from '../../types/models'
 
 export function FarmLanding() {
   const { farmSlug = '' } = useParams()
-  const { user, signOut } = useAuth()
+  const { user, isAdmin, signOut } = useAuth()
   const { openLogin } = useLoginSheet()
   const [farm, setFarm] = useState<Farm | null>(null)
   const [loading, setLoading] = useState(true)
@@ -48,15 +48,22 @@ export function FarmLanding() {
         title={farm.name}
         subtitle={farm.location || '농가 직송'}
         rightElement={
-          user ? (
-            <button type="button" onClick={() => void signOut()} className="text-sm text-muted">
-              로그아웃
-            </button>
-          ) : (
-            <button type="button" onClick={() => openLogin()} className="text-sm font-semibold text-primary">
-              로그인
-            </button>
-          )
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Link to="/admin/farms" className="text-sm font-medium text-muted hover:text-gray-900">
+                관리자 페이지
+              </Link>
+            )}
+            {user ? (
+              <button type="button" onClick={() => void signOut()} className="text-sm text-muted">
+                로그아웃
+              </button>
+            ) : (
+              <button type="button" onClick={() => openLogin()} className="text-sm font-semibold text-primary">
+                로그인
+              </button>
+            )}
+          </div>
         }
       />
       <div className="px-4 py-6 md:px-6 max-w-5xl mx-auto space-y-6">
