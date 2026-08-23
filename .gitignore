@@ -102,5 +102,5 @@ deploy/nginx.conf.backup-*
 
 # 파이썬 서버
 server-py/.venv/
-server-py/__pycache__/
-server-py/app/__pycache__/
+__pycache__/
+*.py[cod]

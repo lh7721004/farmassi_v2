@@ -1,6 +1,7 @@
 import re
 
 from ..sb import sb
+from ..shared.mailer import send_order_mail
 from ..shared.push import notify_farm_members
 from ..shared.util import now_iso, random_code, seoul_date_compact
 from .types import FnCtx, FnResult, fail, ok
@@ -48,9 +49,10 @@ async def create_order(ctx: FnCtx) -> FnResult:
         })
     total = sum(line["line_amount"] for line in lines)
     deposit_code = random_code(6)
+    order_no = f"FA{seoul_date_compact()}-{random_code(4)}"
 
     order_result = await db.from_("orders").insert({
-        "order_no": f"FA{seoul_date_compact()}-{random_code(4)}",
+        "order_no": order_no,
         "farm_id": farm["id"],
         "customer_id": ctx.user_id,
         "status": "pending_deposit",
@@ -95,6 +97,22 @@ async def create_order(ctx: FnCtx) -> FnResult:
     elif body.get("saveAddress"):
         await db.from_("saved_addresses").insert(
             {**saved_payload, "user_id": ctx.user_id, "is_default": True})
+
+    # 메일과 푸시를 함께 보낸다. 푸시는 브라우저 구독이 있어야 도착하는데,
+    # 관리자가 구독하지 않은 채로 주문을 놓치는 일이 실제로 있었다.
+    await send_order_mail(
+        order_no=order_no,
+        farm_name=farm["name"],
+        amount=total,
+        deposit_code=deposit_code,
+        recipient_name=recipient["name"],
+        recipient_phone=recipient["phone"],
+        address=" ".join(x for x in [
+            f"[{recipient['zonecode']}]" if recipient.get("zonecode") else "",
+            recipient["address"], recipient.get("addressDetail") or ""] if x),
+        items=[{"name": line["product_name"], "quantity": line["quantity"]} for line in lines],
+        memo=body.get("requestMemo"),
+    )
 
     await notify_farm_members(
         ctx.admin,

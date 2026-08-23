@@ -87,3 +87,63 @@ export async function sendDepositMail(mail: DepositMail): Promise<boolean> {
     return false
   }
 }
+
+
+export interface OrderMail {
+  orderNo: string
+  farmName: string
+  amount: number
+  depositCode: string
+  recipientName: string
+  recipientPhone: string
+  address: string
+  items: Array<{ name: string; quantity: number }>
+  memo?: string | null
+}
+
+/**
+ * 새 주문 알림 메일.
+ *
+ * 웹푸시가 이미 있지만 브라우저 구독이 있어야 도착한다. 실제로 관리자가
+ * 농가 owner 인데도 구독이 없어 아무 알림도 못 받고 있었다. 메일은 그런
+ * 전제가 없어서 확실하다.
+ */
+export async function sendOrderMail(mail: OrderMail): Promise<boolean> {
+  const mailer = getTransport()
+  if (!mailer) return false
+
+  const to = process.env.ORDER_MAIL_TO ?? process.env.DEPOSIT_MAIL_TO
+  if (!to) return false
+
+  const items = mail.items.map((item) => `${item.name} ×${item.quantity}`).join(', ')
+  const lines = [
+    `${mail.farmName} 에 새 주문이 들어왔습니다.`,
+    '',
+    `주문번호   ${mail.orderNo}`,
+    `상품       ${items}`,
+    `금액       ${won(mail.amount)}`,
+    `입금자명   ${mail.depositCode}`,
+    '',
+    `받는 분    ${mail.recipientName} · ${mail.recipientPhone}`,
+    `주소       ${mail.address}`,
+    mail.memo ? `요청사항   ${mail.memo}` : null,
+    '',
+    '입금이 확인되면 자동으로 결제완료가 됩니다.',
+    '뱅크다에 계좌가 등록되지 않은 농가는 직접 확인해야 합니다.',
+    '',
+    'https://farmassi.kr/admin/orders',
+  ].filter((line) => line !== null)
+
+  try {
+    await mailer.sendMail({
+      from: `팜어시 주문알림 <${process.env.SMTP_USER}>`,
+      to,
+      subject: `[새주문] ${mail.farmName} · ${won(mail.amount)} · ${mail.recipientName}`,
+      text: lines.join('\n'),
+    })
+    return true
+  } catch (error) {
+    console.error('주문 메일 발송 실패', error)
+    return false
+  }
+}

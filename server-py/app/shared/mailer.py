@@ -93,3 +93,62 @@ async def send_deposit_mail(
     except Exception as error:  # noqa: BLE001
         print("입금 메일 발송 실패", error)
         return False
+
+
+async def send_order_mail(
+    *, order_no: str, farm_name: str, amount: int, deposit_code: str,
+    recipient_name: str, recipient_phone: str, address: str,
+    items: list[dict], memo: str | None = None,
+) -> bool:
+    """
+    새 주문 알림 메일.
+
+    웹푸시가 이미 있지만 브라우저 구독이 있어야 도착한다. 실제로 관리자가
+    농가 owner 인데도 구독이 없어 아무 알림도 못 받고 있었다. 메일은 그런
+    전제가 없어서 확실하다.
+    """
+    user = os.environ.get("SMTP_USER")
+    password = os.environ.get("SMTP_PASSWORD")
+    to = os.environ.get("ORDER_MAIL_TO") or os.environ.get("DEPOSIT_MAIL_TO")
+    if not user or not password or not to:
+        return False
+
+    listed = ", ".join(f"{i['name']} ×{i['quantity']}" for i in items)
+    lines = [
+        f"{farm_name} 에 새 주문이 들어왔습니다.",
+        "",
+        f"주문번호   {order_no}",
+        f"상품       {listed}",
+        f"금액       {_won(amount)}",
+        f"입금자명   {deposit_code}",
+        "",
+        f"받는 분    {recipient_name} · {recipient_phone}",
+        f"주소       {address}",
+    ]
+    if memo:
+        lines.append(f"요청사항   {memo}")
+    lines += [
+        "",
+        "입금이 확인되면 자동으로 결제완료가 됩니다.",
+        "뱅크다에 계좌가 등록되지 않은 농가는 직접 확인해야 합니다.",
+        "",
+        "https://farmassi.kr/admin/orders",
+    ]
+
+    message = EmailMessage()
+    message["From"] = f"팜어시 주문알림 <{user}>"
+    message["To"] = to
+    message["Subject"] = f"[새주문] {farm_name} · {_won(amount)} · {recipient_name}"
+    message.set_content("\n".join(lines))
+
+    try:
+        await aiosmtplib.send(
+            message,
+            hostname=os.environ.get("SMTP_HOST") or "smtp.gmail.com",
+            port=int(os.environ.get("SMTP_PORT") or 465),
+            use_tls=True, username=user, password=password,
+        )
+        return True
+    except Exception as error:  # noqa: BLE001
+        print("주문 메일 발송 실패", error)
+        return False
