@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from . import db
 from .config import config
 from .jwt_session import verify
+from .query import run_query
 from .version import VERSION
 
 
@@ -83,3 +84,12 @@ async def auth_me(uid: str | None = Depends(user_id)):
     async with db.with_user(uid) as conn:
         row = await conn.fetchrow("select * from profiles where id = $1", uid)
     return {"user": {"id": uid, "profile": dict(row)} if row else None}
+
+
+@app.post("/query")
+async def query(request: Request, uid: str | None = Depends(user_id)):
+    """데이터 게이트웨이. RLS 가 적용되는 커넥션으로 나간다."""
+    body = await request.json()
+    async with db.with_user(uid) as conn:
+        result = await run_query(conn, body)
+    return {"data": result.data, "count": result.count, "error": None}
