@@ -24,7 +24,7 @@ export function ShippingScheduleNotice() {
         <p className="text-[13px] leading-snug text-gray-700">
           <span className="font-semibold text-gray-900">예상 배송일정</span>
           <span className="ml-1.5 whitespace-nowrap font-semibold text-primary">{eta}</span>
-          {' · '}
+          <br />
           평일 17시 이전까지 주문 시 다음날 출고, 1~2일 내 도착
         </p>
         <p className="mt-0.5 text-xs leading-snug text-muted">
