@@ -96,7 +96,10 @@ export interface Product {
   id: string
   farm_id: string
   name: string
+  /** 실제로 받는 금액. 주문 금액 계산은 전부 이 값을 쓴다. */
   price: number
+  /** 할인 전 원래 가격. price 보다 클 때만 취소선으로 표시한다. */
+  list_price: number | null
   unit: string | null
   description: string | null
   image_url: string | null

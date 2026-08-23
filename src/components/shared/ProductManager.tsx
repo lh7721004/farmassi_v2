@@ -10,7 +10,7 @@ import {
   KPOST_VOLUMES,
   KPOST_WEIGHTS,
 } from '../../lib/kpostParcelExcel'
-import { formatPrice } from '../../lib/format'
+import { PriceTag, discountRate } from './PriceTag'
 import { deletePublicImage, preparePublicImage, uploadFarmImage } from '../../lib/storageImages'
 import { supabase } from '../../lib/supabase'
 import {
@@ -40,6 +40,8 @@ function ImageFileInput({ onPick }: { onPick: (file: File) => void }) {
 interface ProductFormValues {
   name: string
   price: string
+  /** 할인 전 원래 가격. 빈 문자열이면 할인 없음. */
+  list_price: string
   unit: string
   description: string
   image_url: string
@@ -75,6 +77,7 @@ function unitSelectOptions(current: string) {
 const emptyProductForm: ProductFormValues = {
   name: '',
   price: '',
+  list_price: '',
   unit: unitFromWeight('5'),
   description: '',
   image_url: '',
@@ -89,6 +92,7 @@ function productToForm(product: Product): ProductFormValues {
   return {
     name: product.name,
     price: String(product.price),
+    list_price: product.list_price === null ? '' : String(product.list_price),
     unit: normalizeUnit(product.unit, parcel_weight_kg),
     description: product.description ?? '',
     image_url: product.image_url ?? '',
@@ -103,6 +107,8 @@ function formPayload(form: ProductFormValues) {
   return {
     name: form.name.trim(),
     price: Number(form.price),
+    // 비워 두면 할인 없음. 0 을 넣어도 할인으로 치지 않는다(표시 조건이 price 초과).
+    list_price: form.list_price.trim() === '' ? null : Number(form.list_price),
     unit: form.unit.trim() || null,
     description: form.description.trim() || null,
     parcel_weight_kg: form.parcel_weight_kg,
@@ -156,7 +162,28 @@ function ProductFormCard({
         )}
       </div>
       <Input label="상품명" value={form.name} onChange={(e) => onChange('name', e.target.value)} />
-      <Input label="가격" type="number" value={form.price} onChange={(e) => onChange('price', e.target.value)} />
+      <Input
+        label="판매 가격"
+        type="number"
+        value={form.price}
+        onChange={(e) => onChange('price', e.target.value)}
+      />
+      <div>
+        <Input
+          label="원래 가격 (선택)"
+          type="number"
+          value={form.list_price}
+          onChange={(e) => onChange('list_price', e.target.value)}
+          placeholder="할인 전 가격"
+        />
+        <p className="mt-1 text-xs text-muted">
+          {discountRate(Number(form.price), Number(form.list_price) || null) !== null
+            ? `${discountRate(Number(form.price), Number(form.list_price) || null)}% 할인으로 표시됩니다.`
+            : form.list_price.trim() !== ''
+              ? '원래 가격이 판매 가격보다 커야 할인으로 표시됩니다.'
+              : '비워 두면 할인 표시가 없습니다.'}
+        </p>
+      </div>
       <Select
         label="단위"
         value={form.unit}
@@ -597,7 +624,9 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
             <p className="font-semibold">
               {product.name} {product.unit}
             </p>
-            <p className="text-sm text-primary">{formatPrice(product.price)}</p>
+            <p className="text-sm text-primary">
+              <PriceTag price={product.price} listPrice={product.list_price} />
+            </p>
             <p className="text-xs text-muted">
               {PRODUCT_SALE_STATUS_LABEL[productSaleStatus(product)]} · 택배 {product.parcel_weight_kg}kg · {product.parcel_volume_cm}cm
               · {product.parcel_content_code}
