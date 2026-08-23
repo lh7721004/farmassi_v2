@@ -48,3 +48,24 @@ body {
 .animate-sheet-up {
   animation: sheet-up 0.28s ease-out;
 }
+
+@keyframes product-title-marquee {
+  0%,
+  12% {
+    transform: translateX(0);
+  }
+  88%,
+  100% {
+    transform: translateX(calc(-1 * var(--marquee-shift, 0px)));
+  }
+}
+
+.product-title-marquee {
+  animation: product-title-marquee var(--marquee-duration, 8s) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-title-marquee {
+    animation: none;
+  }
+}

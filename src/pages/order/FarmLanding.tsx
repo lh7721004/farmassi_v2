@@ -3,18 +3,17 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Header } from '../../components/layout/Header'
 import { useLoginSheet } from '../../components/auth/LoginSheet'
-import { KakaoChannelButton } from '../../components/shared/KakaoChannelButton'
+import { FarmInquiryButtons } from '../../components/shared/KakaoChannelButton'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageSpinner } from '../../components/ui/Feedback'
 import { useAuth } from '../../lib/auth'
-import { kakaoChannelHref } from '../../lib/format'
 import { supabase } from '../../lib/supabase'
 import { parseLandingBlocks, type Farm } from '../../types/models'
 
 export function FarmLanding() {
   const { farmSlug = '' } = useParams()
-  const { user, signOut } = useAuth()
+  const { user, isAdmin, signOut } = useAuth()
   const { openLogin } = useLoginSheet()
   const [farm, setFarm] = useState<Farm | null>(null)
   const [loading, setLoading] = useState(true)
@@ -41,7 +40,6 @@ export function FarmLanding() {
     )
   }
 
-  const kakaoHref = kakaoChannelHref(farm.kakao_channel_url)
   const blocks = parseLandingBlocks(farm.landing_blocks)
 
   return (
@@ -50,15 +48,22 @@ export function FarmLanding() {
         title={farm.name}
         subtitle={farm.location || '농가 직송'}
         rightElement={
-          user ? (
-            <button type="button" onClick={() => void signOut()} className="text-sm text-muted">
-              로그아웃
-            </button>
-          ) : (
-            <button type="button" onClick={() => openLogin()} className="text-sm font-semibold text-primary">
-              로그인
-            </button>
-          )
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Link to="/admin/farms" className="text-sm font-medium text-muted hover:text-gray-900">
+                관리자 페이지
+              </Link>
+            )}
+            {user ? (
+              <button type="button" onClick={() => void signOut()} className="text-sm text-muted">
+                로그아웃
+              </button>
+            ) : (
+              <button type="button" onClick={() => openLogin()} className="text-sm font-semibold text-primary">
+                로그인
+              </button>
+            )}
+          </div>
         }
       />
       <div className="px-4 py-6 md:px-6 max-w-5xl mx-auto space-y-6">
@@ -102,11 +107,11 @@ export function FarmLanding() {
           </>
         )}
 
-        {kakaoHref ? (
-          <Card>
-            <KakaoChannelButton href={kakaoHref} />
-          </Card>
-        ) : null}
+        <FarmInquiryButtons
+          kakaoChannelUrl={farm.kakao_channel_url}
+          phone={farm.phone}
+          mobilePhone={farm.mobile_phone}
+        />
 
         {farm.is_active ? (
           <Link to={`/farm/${farm.slug}`} className="block">

@@ -1,5 +1,5 @@
 import { Minus, Plus } from 'lucide-react'
-import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import {
   PRODUCT_SALE_STATUS_LABEL,
   productSaleStatus,
@@ -18,40 +18,64 @@ interface ProductCardProps {
 
 const MIN_TITLE_PX = 11
 
-function FitTwoLineTitle({ text }: { text: string }) {
-  const ref = useRef<HTMLHeadingElement>(null)
+function FitOneLineTitle({ text }: { text: string }) {
+  const wrapRef = useRef<HTMLHeadingElement>(null)
+  const measureRef = useRef<HTMLSpanElement>(null)
+  const [marquee, setMarquee] = useState(false)
+  const [duration, setDuration] = useState(8)
+  const [shift, setShift] = useState(0)
 
   useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
+    const wrap = wrapRef.current
+    const measure = measureRef.current
+    if (!wrap || !measure) return
 
     const fit = () => {
-      el.style.fontSize = ''
-      const computed = getComputedStyle(el)
-      const baseSize = parseFloat(computed.fontSize)
-      const lineHeightPx = Number.isFinite(parseFloat(computed.lineHeight))
-        ? parseFloat(computed.lineHeight)
-        : baseSize * 1.375
-      const boxHeight = lineHeightPx * 2
-      el.style.height = `${boxHeight}px`
+      wrap.style.fontSize = ''
+      const baseSize = parseFloat(getComputedStyle(wrap).fontSize)
       let size = baseSize
-      while (el.scrollHeight > boxHeight + 0.5 && size > MIN_TITLE_PX) {
+      wrap.style.fontSize = `${size}px`
+      const available = wrap.clientWidth
+      while (measure.scrollWidth > available + 0.5 && size > MIN_TITLE_PX) {
         size -= 0.5
-        el.style.fontSize = `${size}px`
+        wrap.style.fontSize = `${size}px`
+      }
+      const overflowPx = measure.scrollWidth - available
+      const overflow = overflowPx > 0.5
+      setMarquee(overflow)
+      if (overflow) {
+        setShift(overflowPx)
+        setDuration(Math.max(5, overflowPx / 28))
       }
     }
 
     fit()
-    const parent = el.parentElement
-    if (!parent) return undefined
     const observer = new ResizeObserver(fit)
-    observer.observe(parent)
+    observer.observe(wrap)
     return () => observer.disconnect()
   }, [text])
 
   return (
-    <h3 ref={ref} className="overflow-hidden break-words font-bold leading-snug text-gray-900">
-      {text}
+    <h3
+      ref={wrapRef}
+      className="relative overflow-hidden whitespace-nowrap font-bold leading-snug text-gray-900"
+    >
+      <span ref={measureRef} className="invisible absolute whitespace-nowrap" aria-hidden>
+        {text}
+      </span>
+      {marquee ? (
+        <span
+          className="product-title-marquee inline-block"
+          style={{
+            ['--marquee-duration' as string]: `${duration}s`,
+            ['--marquee-shift' as string]: `${shift}px`,
+          }}
+        >
+          {text}
+        </span>
+      ) : (
+        text
+      )}
     </h3>
   )
 }
@@ -76,9 +100,17 @@ export function ProductCard({ product, quantity = 0, onChangeQuantity, extra }: 
         )}
       </div>
       <div className="flex flex-1 flex-col p-4">
-        <FitTwoLineTitle text={product.name} />
-        <p className="mt-2 text-lg font-bold text-primary">
-          <PriceTag price={product.price} listPrice={product.list_price} />
+        <FitOneLineTitle text={product.name} />
+        {product.description?.trim() ? (
+          <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-sm leading-snug text-muted">
+            {product.description.trim()}
+          </p>
+        ) : null}
+        <p className="mt-2 flex items-baseline gap-1.5">
+          <span className="text-lg font-bold text-primary">
+            <PriceTag price={product.price} listPrice={product.list_price} />
+          </span>
+          <span className="text-xs text-muted">배송비 포함</span>
         </p>
         {extra}
         {!extra && onChangeQuantity && canOrder && (
