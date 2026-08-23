@@ -1,4 +1,4 @@
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, Phone } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { OrderListModel } from '../../types/orderList'
 import { formatPrice } from '../../lib/format'
@@ -36,6 +36,16 @@ export function OrderItem({ order, selected, onSelect, extra }: OrderItemProps) 
           </div>
           <p className="mt-1 text-sm text-gray-700">{order.productSummary}</p>
           <p className="mt-0.5 text-sm text-muted truncate">{order.address}</p>
+          {order.customerPhone && (
+            <a
+              href={`tel:${order.customerPhone.replace(/[^0-9+]/g, '')}`}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-0.5 inline-flex items-center gap-1 text-sm text-muted hover:text-primary"
+            >
+              <Phone className="h-3.5 w-3.5 shrink-0" />
+              {order.customerPhone}
+            </a>
+          )}
           {order.memo && (
             <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-sm text-amber-900">
               <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
