@@ -3,6 +3,7 @@ import { AppShell } from '../../components/layout/AppShell'
 import { Header } from '../../components/layout/Header'
 import { FarmFilterChips } from '../../components/shared/FarmFilterChips'
 import { OrderItem } from '../../components/shared/OrderItem'
+import { OrderStatusFilterChips, type StatusFilterId } from '../../components/shared/OrderStatusFilterChips'
 import { adminNavItems } from '../../config/adminNav'
 import { statusLabels } from '../../lib/orderStatus'
 import { farmsFromOrders, groupOrdersByFarm, toOrderListModel, type OrderRow } from '../../lib/orders'
@@ -12,6 +13,7 @@ import type { OrderStatus } from '../../types/models'
 export function AdminOrders() {
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [farmId, setFarmId] = useState<string | 'all'>('all')
+  const [status, setStatus] = useState<StatusFilterId>('all')
 
   async function load() {
     const { data } = await supabase
@@ -26,9 +28,13 @@ export function AdminOrders() {
   }, [])
 
   const farms = useMemo(() => farmsFromOrders(orders), [orders])
-  const visible = useMemo(
+  const farmFiltered = useMemo(
     () => (farmId === 'all' ? orders : orders.filter((order) => order.farm_id === farmId)),
     [farmId, orders],
+  )
+  const visible = useMemo(
+    () => (status === 'all' ? farmFiltered : farmFiltered.filter((order) => order.status === status)),
+    [farmFiltered, status],
   )
   const groups = useMemo(() => groupOrdersByFarm(visible), [visible])
   const showGroupHeaders = farmId === 'all' && groups.length > 1
@@ -43,7 +49,10 @@ export function AdminOrders() {
     <AppShell navItems={adminNavItems} roleLabel="관리자" settingsPath="/admin/none">
       <Header title="주문" subtitle={`${visible.length}건`} />
       <div className="px-4 py-4 md:px-6 max-w-5xl mx-auto space-y-4">
-        <FarmFilterChips farms={farms} selectedId={farmId} onSelect={setFarmId} allCount={orders.length} />
+        <div className="space-y-2">
+          <FarmFilterChips farms={farms} selectedId={farmId} onSelect={setFarmId} allCount={orders.length} />
+          <OrderStatusFilterChips orders={farmFiltered} selectedId={status} onSelect={setStatus} />
+        </div>
         {groups.map((group) => (
           <section key={group.farmId} className="space-y-3">
             {showGroupHeaders && (
@@ -78,7 +87,11 @@ export function AdminOrders() {
             ))}
           </section>
         ))}
-        {visible.length === 0 && <p className="text-center text-muted py-8">주문이 없습니다</p>}
+        {visible.length === 0 && (
+          <p className="text-center text-muted py-8">
+            {status === 'all' ? '주문이 없습니다' : '해당 상태의 주문이 없습니다'}
+          </p>
+        )}
       </div>
     </AppShell>
   )
