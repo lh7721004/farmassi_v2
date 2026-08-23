@@ -33,6 +33,10 @@ class Config:
         return required("JWT_SECRET")
 
     @property
+    def kakao(self) -> "_Kakao":
+        return _Kakao()
+
+    @property
     def session_days(self) -> int:
         return int(optional("SESSION_DAYS", "30"))
 
@@ -53,6 +57,20 @@ class Config:
     @property
     def public_upload_base(self) -> str:
         return optional("PUBLIC_UPLOAD_BASE", "https://api.shop.lkim.me/files")
+
+
+class _Kakao:
+    @property
+    def client_id(self) -> str:
+        return required("KAKAO_REST_API_KEY")
+
+    @property
+    def client_secret(self) -> str:
+        return os.environ.get("KAKAO_CLIENT_SECRET") or ""
+
+    @property
+    def redirect_uri(self) -> str:
+        return optional("KAKAO_REDIRECT_URI", "https://api.shop.lkim.me/auth/kakao/callback")
 
 
 config = Config()

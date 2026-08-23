@@ -5,17 +5,24 @@ Node 서버(server/)를 옮기는 중이다. 두 서버가 동시에 떠 있어�
 경로별로 nginx 에서 넘긴다. 응답 형태는 Node 쪽과 같아야 한다 —
 프론트가 그 형태에 맞춰져 있고 거슬러 올라가면 PostgREST 형식이다.
 """
+import json
 import os
 from contextlib import asynccontextmanager
 
+import base64
+
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import db
 from .config import config
-from .jwt_session import verify
+from .jwt_session import sign, verify
 from .functions import FUNCTIONS, FnCtx
+from .kakao import callback_url, start_url
 from .query import run_query
+from .scheduler import start_scheduler
+from .storage import delete_image, resolve_file, upload_image
 from .version import VERSION
 
 
@@ -23,7 +30,10 @@ from .version import VERSION
 async def lifespan(_: FastAPI):
     await db.connect()
     print(f"farmassi API (py) v{VERSION['version']} ({VERSION['commit']}) → http://127.0.0.1:{config.port}")
+    task = start_scheduler()
     yield
+    if task is not None:
+        task.cancel()
     await db.disconnect()
 
 
@@ -60,6 +70,15 @@ def user_id(request: Request) -> str | None:
         return None
     claims = verify(header[7:])
     return claims["sub"] if claims else None
+
+
+@app.exception_handler(StarletteHTTPException)
+async def on_http_error(_: Request, exc: StarletteHTTPException):
+    """맞는 경로가 없으면 Node 와 같은 본문을 낸다. 프론트가 문구로 분기하지는
+    않지만, 대조로 차이를 잡아내려면 형태가 같아야 한다."""
+    if exc.status_code == 404:
+        return JSONResponse({"error": "없는 주소입니다."}, status_code=404)
+    return JSONResponse({"error": exc.detail}, status_code=exc.status_code)
 
 
 @app.exception_handler(Exception)
@@ -113,3 +132,74 @@ async def rpc(name: str, request: Request, uid: str | None = Depends(user_id)):
     async with db.with_admin() as conn:
         result = await handler(FnCtx(user_id=uid, body=body, admin=conn))
     return JSONResponse(result.body, status_code=result.status)
+
+
+# 업로드는 base64 로 33% 부풀기 때문에 일반 요청보다 크게 받는다.
+MAX_BODY = 2 * 1024 * 1024
+MAX_UPLOAD_BODY = 9 * 1024 * 1024   # 5MB 원본 + base64 여유
+
+
+@app.get("/files/{path:path}")
+async def files(path: str):
+    """업로드된 파일을 공개로 내보낸다. nginx 를 거치지 않는 경로에서도 동작하도록."""
+    try:
+        found = resolve_file(path)
+    except Exception:  # noqa: BLE001
+        return JSONResponse(None, status_code=400)
+    if found is None:
+        return JSONResponse({"error": "파일을 찾을 수 없습니다."}, status_code=404)
+    full, mime = found
+    return FileResponse(full, media_type=mime,
+                        headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
+@app.post("/storage/upload")
+async def storage_upload(request: Request, uid: str | None = Depends(user_id)):
+    raw = await request.body()
+    if len(raw) > MAX_UPLOAD_BODY:
+        raise Exception(f"요청 본문이 너무 큽니다. (최대 {MAX_UPLOAD_BODY // 1024 // 1024}MB)")
+    body = json.loads(raw) if raw else {}
+    data = base64.b64decode(str(body.get("data") or ""), validate=False)
+    async with db.with_user(uid) as conn:
+        return await upload_image(conn, uid, str(body.get("path") or ""),
+                                  str(body.get("contentType") or ""), data)
+
+
+@app.post("/storage/delete")
+async def storage_delete(request: Request, uid: str | None = Depends(user_id)):
+    body = await request.json() if await request.body() else {}
+    async with db.with_user(uid) as conn:
+        await delete_image(conn, uid, str(body.get("path") or ""))
+    return {"ok": True}
+
+
+@app.get("/auth/kakao/start")
+async def kakao_start(redirect: str | None = None):
+    return RedirectResponse(start_url(redirect), status_code=302)
+
+
+@app.get("/auth/kakao/callback")
+async def kakao_callback(code: str | None = None, state: str | None = None):
+    return RedirectResponse(await callback_url(code, state), status_code=302)
+
+
+@app.post("/auth/dev-login")
+async def dev_login(request: Request):
+    """카카오 로그인이 붙기 전까지 쓰는 임시 발급구. ALLOW_DEV_LOGIN 이 켜져 있을 때만."""
+    if os.environ.get("ALLOW_DEV_LOGIN") != "true":
+        return JSONResponse({"error": "사용할 수 없습니다."}, status_code=404)
+    body = await request.json() if await request.body() else {}
+    email = str(body.get("email") or "").strip()
+    if not email:
+        return JSONResponse({"error": "email 이 필요합니다."}, status_code=400)
+
+    async with db.with_admin() as conn:
+        found = await conn.fetchval("select id from auth.users where email = $1", email)
+        if found:
+            uid = found
+        else:
+            uid = await conn.fetchval(
+                "insert into auth.users (email, raw_user_meta_data)"
+                " values ($1, $2) returning id",
+                email, json.dumps({"nickname": body.get("name") or email.split("@")[0]}))
+    return {"token": sign(uid), "userId": uid}
