@@ -3,12 +3,11 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Header } from '../../components/layout/Header'
 import { useLoginSheet } from '../../components/auth/LoginSheet'
-import { KakaoChannelButton } from '../../components/shared/KakaoChannelButton'
+import { FarmInquiryButtons } from '../../components/shared/KakaoChannelButton'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageSpinner } from '../../components/ui/Feedback'
 import { useAuth } from '../../lib/auth'
-import { kakaoChannelHref } from '../../lib/format'
 import { supabase } from '../../lib/supabase'
 import { parseLandingBlocks, type Farm } from '../../types/models'
 
@@ -41,7 +40,6 @@ export function FarmLanding() {
     )
   }
 
-  const kakaoHref = kakaoChannelHref(farm.kakao_channel_url)
   const blocks = parseLandingBlocks(farm.landing_blocks)
 
   return (
@@ -102,11 +100,11 @@ export function FarmLanding() {
           </>
         )}
 
-        {kakaoHref ? (
-          <Card>
-            <KakaoChannelButton href={kakaoHref} />
-          </Card>
-        ) : null}
+        <FarmInquiryButtons
+          kakaoChannelUrl={farm.kakao_channel_url}
+          phone={farm.phone}
+          mobilePhone={farm.mobile_phone}
+        />
 
         {farm.is_active ? (
           <Link to={`/farm/${farm.slug}`} className="block">

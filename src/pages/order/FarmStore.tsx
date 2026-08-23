@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Header } from '../../components/layout/Header'
 import { useLoginSheet } from '../../components/auth/LoginSheet'
-import { KakaoChannelButton } from '../../components/shared/KakaoChannelButton'
+import { FarmInquiryButtons } from '../../components/shared/KakaoChannelButton'
 import { ProductCard } from '../../components/shared/ProductCard'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -65,6 +65,7 @@ export function FarmStore() {
   }
 
   const kakaoHref = kakaoChannelHref(farm?.kakao_channel_url)
+  const hasInquiry = Boolean(kakaoHref || farm?.phone?.trim() || farm?.mobile_phone?.trim())
 
   if (loading) return <PageSpinner />
   if (!farm) {
@@ -96,8 +97,12 @@ export function FarmStore() {
         }
       />
       <div className="px-4 py-4 md:px-6 max-w-5xl mx-auto space-y-4">
-        {kakaoHref ? (
-          <KakaoChannelButton href={kakaoHref} />
+        {hasInquiry ? (
+          <FarmInquiryButtons
+            kakaoChannelUrl={farm.kakao_channel_url}
+            phone={farm.phone}
+            mobilePhone={farm.mobile_phone}
+          />
         ) : (farm.description || farm.product_summary) ? (
           <Card>
             <p className="text-sm text-gray-700">{farm.description || farm.product_summary}</p>
