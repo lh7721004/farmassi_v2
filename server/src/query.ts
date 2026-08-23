@@ -1,5 +1,5 @@
 import type { Db } from './db.ts'
-import { assertColumn, assertTable, findRelation, invalidateSchema, loadSchema,
+import { assertColumn, assertTable, findRelation, invalidateSchema, isJsonColumn, loadSchema,
          UnknownIdentifierError, type SchemaInfo } from './schema.ts'
 
 /**
@@ -92,6 +92,20 @@ function nextAlias(ctx: BuildContext): string {
 function bind(ctx: BuildContext, value: unknown): string {
   ctx.params.push(value)
   return `$${ctx.params.length}`
+}
+
+/**
+ * json/jsonb 컬럼에 넣을 값을 바인딩한다.
+ *
+ * node-postgres 는 JS 배열을 Postgres 배열 리터럴로 직렬화하므로, 배열을 담는
+ * jsonb 컬럼(farms.landing_blocks)에 그대로 넘기면 'invalid input syntax for
+ * type json' 이 난다. 미리 문자열로 만들어 넘긴다.
+ */
+function bindValue(ctx: BuildContext, table: string, column: string, value: unknown): string {
+  if (isJsonColumn(ctx.schema, table, column) && value !== null && typeof value === 'object') {
+    return bind(ctx, JSON.stringify(value))
+  }
+  return bind(ctx, value)
 }
 
 /** select 목록을 만든다. 임베드는 스칼라 서브쿼리로 붙인다. */
@@ -237,7 +251,7 @@ async function runQueryOnce(db: Db, request: QueryRequest): Promise<QueryResult>
     for (const column of columns) assertColumn(schema, request.table, column)
 
     const tuples = list.map((row) =>
-      `(${columns.map((c) => bind(ctx, row[c] ?? null)).join(', ')})`)
+      `(${columns.map((c) => bindValue(ctx, request.table, c, row[c] ?? null)).join(', ')})`)
 
     let sql = `insert into ${quote(request.table)} (${columns.map(quote).join(', ')}) values ${tuples.join(', ')}`
 
@@ -264,7 +278,7 @@ async function runQueryOnce(db: Db, request: QueryRequest): Promise<QueryResult>
     for (const column of columns) assertColumn(schema, request.table, column)
 
     let sql = `update ${quote(request.table)} ${alias} set ` +
-      columns.map((c) => `${quote(c)} = ${bind(ctx, values[c])}`).join(', ')
+      columns.map((c) => `${quote(c)} = ${bindValue(ctx, request.table, c, values[c])}`).join(', ')
     sql += buildWhere(ctx, request.table, alias, request.filters)
     if (request.returning !== false) sql += ' returning *'
     const rows = (await db.query(sql, ctx.params)).rows

@@ -17,6 +17,16 @@ export interface ForeignKey {
 
 export interface SchemaInfo {
   columns: Map<string, Set<string>>
+  /**
+   * json/jsonb 컬럼 목록 ('테이블.컬럼').
+   *
+   * node-postgres 는 JS 배열을 Postgres 배열 리터럴 '{...}' 로 직렬화한다.
+   * jsonb 컬럼에 배열을 넣으면 그 리터럴을 JSON 으로 파싱하려다 실패한다
+   * (farms.landing_blocks 가 실제로 그랬다). 객체는 JSON 으로 직렬화되어
+   * 우연히 동작했기 때문에 오래 드러나지 않았다.
+   * 그래서 어느 컬럼이 json 인지 알아야 한다.
+   */
+  jsonColumns: Set<string>
   foreignKeys: ForeignKey[]
 }
 
@@ -27,15 +37,19 @@ export async function loadSchema(): Promise<SchemaInfo> {
 
   const client = await adminPool.connect()
   try {
-    const cols = await client.query<{ table_name: string; column_name: string }>(
-      `select table_name, column_name
+    const cols = await client.query<{ table_name: string; column_name: string; udt_name: string }>(
+      `select table_name, column_name, udt_name
          from information_schema.columns
         where table_schema = 'public'`,
     )
     const columns = new Map<string, Set<string>>()
+    const jsonColumns = new Set<string>()
     for (const row of cols.rows) {
       if (!columns.has(row.table_name)) columns.set(row.table_name, new Set())
       columns.get(row.table_name)!.add(row.column_name)
+      if (row.udt_name === 'json' || row.udt_name === 'jsonb') {
+        jsonColumns.add(`${row.table_name}.${row.column_name}`)
+      }
     }
 
     // information_schema 는 권한으로 걸러져서 테이블 소유자가 아니면 제약을 못 본다.
@@ -54,7 +68,7 @@ export async function loadSchema(): Promise<SchemaInfo> {
         where con.contype = 'f'`,
     )
 
-    cache = { columns, foreignKeys: fks.rows }
+    cache = { columns, jsonColumns, foreignKeys: fks.rows }
     return cache
   } finally {
     client.release()
@@ -76,6 +90,11 @@ export function invalidateSchema(): void {
 
 export function assertTable(schema: SchemaInfo, table: string): void {
   if (!schema.columns.has(table)) throw new UnknownIdentifierError(`알 수 없는 테이블: ${table}`)
+}
+
+/** json/jsonb 컬럼이면 값을 문자열로 넘겨야 한다. (SchemaInfo.jsonColumns 주석 참고) */
+export function isJsonColumn(schema: SchemaInfo, table: string, column: string): boolean {
+  return schema.jsonColumns.has(`${table}.${column}`)
 }
 
 export function assertColumn(schema: SchemaInfo, table: string, column: string): void {
