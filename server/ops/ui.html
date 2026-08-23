@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>farmassi 서버 관리</title>
+<style>
+  :root {
+    --bg: #10100e; --panel: #191917; --line: #2b2b27; --line-soft: #232320;
+    --ink: #eceae4; --muted: #8f8c83; --faint: #63615b;
+    --accent: #b8d44a; --accent-ink: #1b2200;
+    --warn: #e0a33c; --bad: #e0674a; --ok: #7bb661;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 -apple-system, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+    height: 100vh; display: grid; grid-template-columns: 260px 1fr;
+  }
+  /* ── 사이드바 ── */
+  aside {
+    background: var(--panel); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .brand {
+    padding: 14px 16px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .brand b { font-size: 14px; letter-spacing: -0.01em; }
+  .brand span { font-size: 11px; color: var(--faint); font-family: var(--mono); }
+  .side-scroll { overflow-y: auto; flex: 1; padding-bottom: 20px; }
+  .side-head {
+    padding: 14px 16px 6px; font-size: 10px; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  .tbl {
+    display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+    padding: 4px 16px; cursor: pointer; font-family: var(--mono); font-size: 12px;
+    color: var(--muted); border: 0; background: none; width: 100%; text-align: left;
+  }
+  .tbl:hover { background: var(--line-soft); color: var(--ink); }
+  .tbl .n { font-size: 10.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .schema-tag { color: var(--faint); }
+  /* ── 본문 ── */
+  main { display: flex; flex-direction: column; overflow: hidden; }
+  .tabs { display: flex; gap: 2px; padding: 10px 16px 0; border-bottom: 1px solid var(--line); }
+  .tab {
+    border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px;
+    padding: 7px 14px; cursor: pointer; border-radius: 7px 7px 0 0;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .pane { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+  .pane[data-on] { display: flex; }
+  .bar {
+    display: flex; gap: 8px; align-items: center; padding: 10px 16px;
+    border-bottom: 1px solid var(--line-soft); flex-wrap: wrap;
+  }
+  select, input, button, textarea {
+    font: inherit; background: #131311; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px;
+  }
+  input, select { font-size: 13px; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--faint); }
+  .go { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .go:hover { filter: brightness(1.08); border-color: var(--accent); }
+  .spacer { flex: 1; }
+  .note { font-size: 11.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .note.err { color: var(--bad); }
+  textarea {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.6; resize: vertical;
+    margin: 12px 16px 0; min-height: 96px; tab-size: 2;
+  }
+  .out { flex: 1; overflow: auto; margin: 12px 0 0; }
+  table { border-collapse: collapse; font-family: var(--mono); font-size: 12px; width: max-content; min-width: 100%; }
+  th, td {
+    border-bottom: 1px solid var(--line-soft); padding: 5px 12px;
+    text-align: left; white-space: pre; vertical-align: top;
+    max-width: 460px; overflow: hidden; text-overflow: ellipsis;
+  }
+  th {
+    position: sticky; top: 0; background: var(--panel); color: var(--muted);
+    font-weight: 600; font-size: 11px; letter-spacing: 0.03em; z-index: 1;
+    border-bottom-color: var(--line);
+  }
+  td { font-variant-numeric: tabular-nums; }
+  tbody tr:hover td { background: #1c1c19; }
+  .nul { color: var(--faint); font-style: italic; }
+  pre.log {
+    flex: 1; overflow: auto; margin: 0; padding: 12px 16px;
+    font-family: var(--mono); font-size: 12px; line-height: 1.55; white-space: pre;
+  }
+  .empty { padding: 40px 16px; text-align: center; color: var(--faint); font-size: 13px; }
+  .banner {
+    padding: 6px 16px; background: #1d1a10; color: var(--warn);
+    font-size: 11.5px; border-bottom: 1px solid var(--line);
+  }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><b>farmassi 서버</b><span id="brandDb">—</span></div>
+  <div class="side-scroll" id="side"></div>
+</aside>
+
+<main>
+  <div class="banner">로컬 전용 · DB 는 <b>읽기 전용</b>(ops_ro)으로 접속합니다</div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-pane="q">질의</button>
+    <button class="tab" role="tab" aria-selected="false" data-pane="l">로그</button>
+  </div>
+
+  <section class="pane" data-pane="q" data-on>
+    <div class="bar">
+      <select id="db"></select>
+      <button class="go" id="run">실행 <span class="note" style="color:inherit;opacity:.7">⌘↵</span></button>
+      <div class="spacer"></div>
+      <span class="note" id="qnote"></span>
+    </div>
+    <textarea id="sql" spellcheck="false" placeholder="select * from orders order by created_at desc limit 20;"></textarea>
+    <div class="out" id="qout"><div class="empty">왼쪽에서 테이블을 고르거나 질의를 입력하세요</div></div>
+  </section>
+
+  <section class="pane" data-pane="l">
+    <div class="bar">
+      <select id="logId"></select>
+      <select id="lines">
+        <option>100</option><option selected>200</option><option>500</option><option>2000</option>
+      </select>
+      <input id="q" placeholder="검색어" size="18">
+      <button id="reload">새로고침</button>
+      <label class="note"><input type="checkbox" id="auto" style="vertical-align:-2px"> 5초마다</label>
+      <div class="spacer"></div>
+      <span class="note" id="lnote"></span>
+    </div>
+    <pre class="log" id="logOut"></pre>
+  </section>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s)
+let meta = null, timer = null
+
+const bytes = (n) => n == null ? '—' :
+  n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(0) + ' KB' : (n/1048576).toFixed(1) + ' MB'
+
+async function api(path, opts) {
+  const res = await fetch(path, opts)
+  const body = await res.json()
+  if (!res.ok) throw new Error(body.error || '요청 실패')
+  return body
+}
+
+/* ── 탭 ── */
+document.querySelectorAll('.tab').forEach((tab) => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', String(t === tab)))
+    document.querySelectorAll('.pane').forEach((p) => p.toggleAttribute('data-on', p.dataset.pane === tab.dataset.pane))
+    if (tab.dataset.pane === 'l') loadLog()
+  }
+})
+
+/* ── 사이드바: 선택한 DB 의 테이블 ── */
+function renderSide() {
+  const db = meta.databases.find((d) => d.id === $('#db').value)
+  $('#brandDb').textContent = db ? db.id : '—'
+  if (!db || !db.tables.length) {
+    $('#side').innerHTML = '<div class="empty">테이블을 읽지 못했습니다</div>'
+    return
+  }
+  let html = '', schema = null
+  for (const t of db.tables) {
+    if (t.schema !== schema) { schema = t.schema; html += `<div class="side-head">${schema}</div>` }
+    const full = t.schema === 'public' ? t.name : `${t.schema}.${t.name}`
+    html += `<button class="tbl" data-t="${full}"><span>${t.name}</span><span class="n">${t.rows}</span></button>`
+  }
+  $('#side').innerHTML = html
+  $('#side').querySelectorAll('.tbl').forEach((b) => {
+    b.onclick = () => {
+      $('#sql').value = `select * from ${b.dataset.t} limit 100;`
+      run()
+    }
+  })
+}
+
+/* ── 질의 ── */
+async function run() {
+  $('#qnote').className = 'note'
+  $('#qnote').textContent = '실행 중…'
+  try {
+    const r = await api('/api/query', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ db: $('#db').value, sql: $('#sql').value }),
+    })
+    $('#qnote').textContent =
+      `${r.total}행${r.truncated ? ` (${meta.rowLimit}행까지 표시)` : ''} · ${r.elapsed}ms`
+    if (!r.columns.length) {
+      $('#qout').innerHTML = `<div class="empty">${r.command || '완료'}</div>`
+      return
+    }
+    const head = r.columns.map((c) => `<th>${esc(c)}</th>`).join('')
+    const body = r.rows.map((row) =>
+      '<tr>' + row.map((v) =>
+        v === null ? '<td class="nul">null</td>' : `<td>${esc(String(v))}</td>`).join('') + '</tr>').join('')
+    $('#qout').innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`
+  } catch (e) {
+    $('#qnote').className = 'note err'
+    $('#qnote').textContent = e.message
+  }
+}
+const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+
+$('#run').onclick = run
+$('#sql').addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); run() }
+})
+$('#db').onchange = renderSide
+
+/* ── 로그 ── */
+async function loadLog() {
+  const id = $('#logId').value
+  try {
+    const r = await api(`/api/log?id=${id}&lines=${$('#lines').value}&q=${encodeURIComponent($('#q').value)}`)
+    const out = $('#logOut')
+    const atBottom = out.scrollHeight - out.scrollTop - out.clientHeight < 40
+    out.textContent = r.text || '(비어 있음)'
+    if (atBottom) out.scrollTop = out.scrollHeight
+    const f = meta.logs.find((l) => l.id === id)
+    $('#lnote').className = 'note'
+    $('#lnote').textContent = `${bytes(f?.size)} · ${new Date().toLocaleTimeString('ko-KR')}`
+  } catch (e) {
+    $('#lnote').className = 'note err'
+    $('#lnote').textContent = e.message
+  }
+}
+$('#reload').onclick = loadLog
+$('#logId').onchange = loadLog
+$('#lines').onchange = loadLog
+$('#q').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadLog() })
+$('#auto').onchange = (e) => {
+  clearInterval(timer)
+  if (e.target.checked) timer = setInterval(loadLog, 5000)
+}
+
+/* ── 시작 ── */
+;(async () => {
+  meta = await api('/api/meta')
+  $('#db').innerHTML = meta.databases.map((d) => `<option value="${d.id}">${d.label}</option>`).join('')
+  $('#logId').innerHTML = meta.logs
+    .map((l) => `<option value="${l.id}">${l.label}${l.size == null ? ' (없음)' : ''}</option>`).join('')
+  renderSide()
+})()
+</script>
+</body>
+</html>
