@@ -142,6 +142,12 @@ export function Checkout() {
           try {
             const result = await invokeFunction<CheckoutResult>('create-order', {
               farmId: farm.id,
+              sender: {
+                depositorName: senderUi.depositorName,
+                name: senderUi.name,
+                phone: senderUi.phone,
+                address: senderUi.addressDetail,
+              },
               items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
               recipient: {
                 name: form.recipient_name,
