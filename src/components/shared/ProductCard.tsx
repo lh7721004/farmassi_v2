@@ -87,7 +87,7 @@ export function ProductCard({ product, quantity = 0, onChangeQuantity, extra }: 
 
   return (
     <Card className="flex h-full flex-col overflow-hidden p-0">
-      <div className="relative h-36 shrink-0">
+      <div className="relative aspect-[16/9] shrink-0">
         {product.image_url ? (
           <img src={product.image_url} alt={product.name} draggable={false} className="h-full w-full object-cover" />
         ) : (
