@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { History } from 'lucide-react'
+import { History, PenLine } from 'lucide-react'
 import { AppShell } from '../../components/layout/AppShell'
 import { Header } from '../../components/layout/Header'
 import { KpostParcelExport } from '../../components/shared/KpostParcelExport'
@@ -59,12 +59,20 @@ export function AdminShipments() {
         title="송장"
         subtitle="농가별 우체국 창구소포 엑셀"
         rightElement={
-          <Link to="/admin/shipping-history">
-            <Button size="sm" variant="outline">
-              <History className="h-4 w-4" />
-              배송이력 관리
-            </Button>
-          </Link>
+          <div className="flex items-center gap-1.5">
+            <Link to="/admin/shipping-manual">
+              <Button size="sm" variant="outline">
+                <PenLine className="h-4 w-4" />
+                직접작성
+              </Button>
+            </Link>
+            <Link to="/admin/shipping-history">
+              <Button size="sm" variant="outline">
+                <History className="h-4 w-4" />
+                배송이력 관리
+              </Button>
+            </Link>
+          </div>
         }
       />
       <div className="px-4 py-4 md:px-6 max-w-5xl mx-auto space-y-4">
