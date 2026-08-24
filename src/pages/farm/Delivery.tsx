@@ -35,7 +35,7 @@ export function FarmDelivery() {
         }
       />
       <div className="px-4 py-4 md:px-6 max-w-5xl mx-auto space-y-3">
-        <ShippingPausePanel farmName={farm.name} />
+        <ShippingPausePanel farmName={farm.name} farms={[{ id: farm.id, name: farm.name }]} />
         {orders.map((order) => (
           <OrderItem key={order.id} order={toOrderListModel(order)} />
         ))}
