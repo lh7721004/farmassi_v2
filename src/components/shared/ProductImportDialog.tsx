@@ -27,11 +27,23 @@ interface ProductImportDialogProps {
 }
 
 function copyPayload(source: ImportProductRow) {
+  const unitKg = (() => {
+    const raw = source.unit?.trim() ?? ''
+    const match = raw.match(/^(\d+(?:\.\d+)?)\s*kg$/i) ?? raw.match(/^(\d+(?:\.\d+)?)$/)
+    if (match) {
+      const value = Number(match[1])
+      if (Number.isFinite(value) && value > 0) {
+        return Number.isInteger(value) ? `${value}kg` : `${value}kg`
+      }
+    }
+    const parcel = Number(source.parcel_weight_kg)
+    return Number.isFinite(parcel) && parcel > 0 ? `${parcel}kg` : '5kg'
+  })()
   return {
     name: source.name,
     price: source.price,
     list_price: source.list_price,
-    unit: source.unit,
+    unit: unitKg,
     description: source.description,
     image_url: source.image_url,
     parcel_weight_kg: source.parcel_weight_kg,
