@@ -49,6 +49,38 @@ interface ShippingScheduleNoticeProps {
   volumeWarningMessage?: string
 }
 
+/** 한 줄이면 중간점, 줄어들면 중간점 없이 상세부터 줄바꿈. */
+function ScheduleLine({
+  headline,
+  detail,
+  className,
+  titleClassName,
+  dateClassName,
+}: {
+  headline: string
+  detail: string
+  className: string
+  titleClassName: string
+  dateClassName: string
+}) {
+  return (
+    <p
+      className={`flex flex-wrap items-baseline gap-x-[1.125em] overflow-x-clip text-[13px] leading-snug ${className}`}
+    >
+      <span className="shrink-0 whitespace-nowrap">
+        <span className={`font-semibold ${titleClassName}`}>예상 배송일정</span>
+        <span className={`ml-1.5 font-semibold ${dateClassName}`}>{headline}</span>
+      </span>
+      <span className="-ml-[1.125em] flex min-w-[min(100%,max-content)] max-w-[calc(100%+1.125em)] items-baseline">
+        <span className="w-[1.125em] shrink-0 text-center" aria-hidden="true">
+          ·
+        </span>
+        <span className="min-w-0 break-keep">{detail}</span>
+      </span>
+    </p>
+  )
+}
+
 export function ShippingScheduleNotice({
   days,
   farm,
@@ -86,12 +118,13 @@ export function ShippingScheduleNotice({
       <Card className="flex items-start gap-2 border-red-200 bg-red-50 px-3 py-2.5">
         <Truck className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
         <div className="min-w-0">
-          <p className="text-[13px] leading-snug text-red-950">
-            <span className="font-semibold text-red-900">예상 배송일정</span>
-            <span className="ml-1.5 whitespace-nowrap font-semibold text-red-700">{headline}</span>
-            {' · '}
-            {detail}
-          </p>
+          <ScheduleLine
+            headline={headline}
+            detail={detail}
+            className="text-red-950"
+            titleClassName="text-red-900"
+            dateClassName="text-red-700"
+          />
           <p className="mt-0.5 text-xs font-medium leading-snug text-red-700">
             {volumeWarningMessage ?? '현재 주문 물량 증가로 예상배송일정을 확인해주세요'}
           </p>
@@ -104,12 +137,13 @@ export function ShippingScheduleNotice({
     <Card className="flex items-start gap-2 border-primary/15 bg-primary-light px-3 py-2.5">
       <Truck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
       <div className="min-w-0">
-        <p className="text-[13px] leading-snug text-gray-700">
-          <span className="font-semibold text-gray-900">예상 배송일정</span>
-          <span className="ml-1.5 whitespace-nowrap font-semibold text-primary">{headline}</span>
-          {' · '}
-          {detail}
-        </p>
+        <ScheduleLine
+          headline={headline}
+          detail={detail}
+          className="text-gray-700"
+          titleClassName="text-gray-900"
+          dateClassName="text-primary"
+        />
         <p className="mt-0.5 text-xs leading-snug text-muted">
           신선도를 위해 주문이 들어온 후 수확하므로 다음날부터 출고가 가능한 점 양해 부탁드립니다.
         </p>
