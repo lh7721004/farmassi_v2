@@ -26,6 +26,7 @@ import { AdminOrders } from './pages/admin/Orders'
 import { AdminDepositLedger } from './pages/admin/DepositLedger'
 import { AdminDeposits } from './pages/admin/Deposits'
 import { AdminShipments } from './pages/admin/Shipments'
+import { AdminShippingHistory } from './pages/admin/ShippingHistory'
 
 function RedirectLegacyStore({ suffix = '' }: { suffix?: string }) {
   const { farmSlug = '' } = useParams()
@@ -151,6 +152,14 @@ export default function App() {
           element={
             <RequireAdmin>
               <AdminShipments />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/admin/shipping-history"
+          element={
+            <RequireAdmin>
+              <AdminShippingHistory />
             </RequireAdmin>
           }
         />
