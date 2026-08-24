@@ -83,6 +83,12 @@ export interface Farm {
   is_listed: boolean
   /** 배송 가능 요일 (0=일 … 6=토). 빈 배열이면 설정 안 함. */
   delivery_days: number[]
+  /** 배송 일시정지 기간. 둘 다 비어 있으면 정지 없음. */
+  shipping_pause_start: string | null
+  shipping_pause_end: string | null
+  shipping_pause_reason: string | null
+  /** 농가 일일 주문 수량 한도. 넘어도 주문은 받고 화면 경고만. */
+  daily_qty_limit: number
   created_at: string
   updated_at: string
 }
@@ -112,6 +118,10 @@ export interface Product {
   parcel_volume_cm: string
   parcel_content_code: string
   parcel_delivery_type: string
+  /** 상품 일일 주문 수량 한도. 넘어도 주문은 받고 화면 경고만. */
+  daily_qty_limit: number
+  /** 1회 주문에서 이 상품을 담을 수 있는 한도. 넘어도 주문은 받고 화면 경고만. */
+  per_order_qty_limit: number
   created_at: string
   updated_at: string
 }

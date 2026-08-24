@@ -14,16 +14,19 @@ import {
 } from '../../lib/kpostParcelExcel'
 import { PriceTag, discountRate } from './PriceTag'
 import { deletePublicImage, preparePublicImage, uploadFarmImage } from '../../lib/storageImages'
+import { PRODUCT_IMAGE_ASPECT } from '../../lib/imageCrop'
 import { supabase } from '../../lib/supabase'
 import {
   PRODUCT_SALE_STATUS_LABEL,
   PRODUCT_SALE_STATUS_OPTIONS,
   productSaleStatus,
+  type Farm,
   type Product,
   type ProductSaleStatus,
 } from '../../types/models'
 import { ProductCard } from './ProductCard'
 import { ProductImportDialog } from './ProductImportDialog'
+import { ImageCropDialog } from './ImageCropDialog'
 
 function ImageFileInput({ onPick }: { onPick: (file: File) => void }) {
   return (
@@ -52,76 +55,90 @@ interface ProductFormValues {
   parcel_volume_cm: string
   parcel_content_code: string
   parcel_delivery_type: string
+  daily_qty_limit: string
+  per_order_qty_limit: string
 }
 
-const UNIT_OPTIONS = KPOST_WEIGHTS.map((value) => `${value}kg`)
-
-function weightFromUnit(unit: string) {
-  const match = unit.trim().match(/^(\d+)\s*kg$/i)
-  if (!match) return null
-  return KPOST_WEIGHTS.find((value) => value === match[1]) ?? null
-}
-
-function unitFromWeight(weight: string) {
-  return `${weight}kg`
-}
-
-function normalizeUnit(unit: string | null | undefined, parcelWeight: string) {
+/** '5kg', '5 kg', '5' → 숫자. '박스'·'개' 등은 null. */
+function kgAmountFromUnit(unit: string | null | undefined): number | null {
   const raw = unit?.trim() ?? ''
-  if (!raw) return unitFromWeight(parcelWeight)
-  const weight = weightFromUnit(raw)
-  return weight ? unitFromWeight(weight) : raw
+  if (!raw) return null
+  const match = raw.match(/^(\d+(?:\.\d+)?)\s*kg$/i) ?? raw.match(/^(\d+(?:\.\d+)?)$/)
+  if (!match) return null
+  const value = Number(match[1])
+  return Number.isFinite(value) && value > 0 ? value : null
+}
+
+/** 택배 구간과 맞는 kg 이면 그 값, 아니면 null. */
+function kpostWeightFromUnit(unit: string) {
+  const amount = kgAmountFromUnit(unit)
+  if (amount == null) return null
+  const key = Number.isInteger(amount) ? String(amount) : null
+  if (!key) return null
+  return KPOST_WEIGHTS.find((value) => value === key) ?? null
+}
+
+function formatUnitKg(amount: number) {
+  const text = Number.isInteger(amount) ? String(amount) : String(amount)
+  return `${text}kg`
 }
 
 function withCurrentOption(options: readonly string[], current: string) {
   return current && !options.includes(current) ? [current, ...options] : [...options]
 }
 
-function unitSelectOptions(current: string) {
-  return withCurrentOption(UNIT_OPTIONS, current)
-}
-
 const emptyProductForm: ProductFormValues = {
   name: '',
   price: '',
   list_price: '',
-  unit: unitFromWeight('5'),
+  unit: '5',
   description: '',
   image_url: '',
   parcel_weight_kg: '5',
   parcel_volume_cm: '80',
   parcel_content_code: '농/수/축산물(일반)',
   parcel_delivery_type: '',
+  daily_qty_limit: '100',
+  per_order_qty_limit: '100',
 }
 
 function productToForm(product: Product): ProductFormValues {
-  const parcel_weight_kg = weightFromUnit(product.unit ?? '') ?? product.parcel_weight_kg
+  const unitKg = kgAmountFromUnit(product.unit)
+  const parcel_weight_kg =
+    (unitKg != null ? kpostWeightFromUnit(formatUnitKg(unitKg)) : null) ?? product.parcel_weight_kg
   return {
     name: product.name,
     price: String(product.price),
     list_price: product.list_price === null ? '' : String(product.list_price),
-    unit: normalizeUnit(product.unit, parcel_weight_kg),
+    // 박스·개 등 비-kg 값은 택배 중량으로 바꿔 kg 숫자만 쓴다.
+    unit: String(unitKg ?? (Number(parcel_weight_kg) || 5)),
     description: product.description ?? '',
     image_url: product.image_url ?? '',
     parcel_weight_kg,
     parcel_volume_cm: product.parcel_volume_cm,
     parcel_content_code: product.parcel_content_code,
     parcel_delivery_type: product.parcel_delivery_type,
+    daily_qty_limit: String(product.daily_qty_limit ?? 100),
+    per_order_qty_limit: String(product.per_order_qty_limit ?? 100),
   }
 }
 
 function formPayload(form: ProductFormValues) {
+  const unitKg = kgAmountFromUnit(form.unit)
+  if (unitKg == null) throw new Error('단위(kg)를 숫자로 입력하세요.')
   return {
     name: form.name.trim(),
     price: Number(form.price),
     // 비워 두면 할인 없음. 0 을 넣어도 할인으로 치지 않는다(표시 조건이 price 초과).
     list_price: form.list_price.trim() === '' ? null : Number(form.list_price),
-    unit: form.unit.trim() || null,
+    unit: formatUnitKg(unitKg),
     description: form.description.trim() || null,
     parcel_weight_kg: form.parcel_weight_kg,
     parcel_volume_cm: form.parcel_volume_cm,
     parcel_content_code: form.parcel_content_code,
     parcel_delivery_type: form.parcel_delivery_type,
+    daily_qty_limit: Math.max(1, Number(form.daily_qty_limit) || 100),
+    per_order_qty_limit: Math.max(1, Number(form.per_order_qty_limit) || 100),
   }
 }
 
@@ -191,28 +208,50 @@ function ProductFormCard({
               : '비워 두면 할인 표시가 없습니다.'}
         </p>
       </div>
-      <Select
-        label="단위"
-        value={form.unit}
-        onChange={(e) => {
-          const unit = e.target.value
-          onChange('unit', unit)
-          const weight = weightFromUnit(unit)
-          if (weight) onChange('parcel_weight_kg', weight)
-        }}
-      >
-        {unitSelectOptions(form.unit).map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </Select>
+      <div>
+        <Input
+          label="단위 (kg)"
+          type="number"
+          min={0.1}
+          step="any"
+          value={form.unit}
+          onChange={(e) => {
+            const next = e.target.value
+            onChange('unit', next)
+            const kpost = kpostWeightFromUnit(next)
+            if (kpost) onChange('parcel_weight_kg', kpost)
+          }}
+          placeholder="예: 5"
+        />
+        <p className="mt-1 text-xs text-muted">
+          kg 숫자만 입력합니다. &quot;박스&quot;·&quot;개&quot; 같은 값은 저장되지 않습니다.
+        </p>
+      </div>
       <Textarea label="설명" value={form.description} onChange={(e) => onChange('description', e.target.value)} />
+      <div className="grid grid-cols-2 gap-3">
+        <Input
+          label="일일 주문 한도"
+          type="number"
+          min={1}
+          value={form.daily_qty_limit}
+          onChange={(e) => onChange('daily_qty_limit', e.target.value)}
+        />
+        <Input
+          label="1회 주문 한도"
+          type="number"
+          min={1}
+          value={form.per_order_qty_limit}
+          onChange={(e) => onChange('per_order_qty_limit', e.target.value)}
+        />
+      </div>
+      <p className="text-xs text-muted">
+        한도를 넘어도 주문은 받습니다. 매장에서 예상 배송일정이 빨간색으로 바뀌고 안내 문구가 뜹니다.
+      </p>
       <div>
         <span className="text-xs font-medium text-muted">이미지</span>
         {imagePreview ? (
           <div className="relative mt-1 overflow-hidden rounded-xl border border-gray-200">
-            <img src={imagePreview} alt="" className="h-40 w-full object-cover" />
+            <img src={imagePreview} alt="" className="aspect-[16/9] w-full object-cover" />
             <div className="absolute right-2 top-2 flex gap-1">
               <span className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-white/95 px-3 text-xs font-medium text-gray-700 shadow-sm">
                 변경
@@ -228,10 +267,10 @@ function ProductFormCard({
             </div>
           </div>
         ) : (
-          <div className="relative mt-1 flex h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 text-sm text-muted">
+          <div className="relative mt-1 flex aspect-[16/9] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 text-sm text-muted">
             <ImagePlus className="h-6 w-6" />
             앨범 또는 카메라에서 선택
-            <span className="text-xs">최대 5MB · 큰 사진은 자동으로 줄입니다</span>
+            <span className="text-xs">매장 카드와 같은 비율(16:9)로 자릅니다 · 최대 5MB</span>
             <ImageFileInput onPick={onPickImage} />
           </div>
         )}
@@ -243,7 +282,7 @@ function ProductFormCard({
           onChange={(e) => {
             const weight = e.target.value
             onChange('parcel_weight_kg', weight)
-            onChange('unit', unitFromWeight(weight))
+            onChange('unit', weight)
           }}
         >
           {withCurrentOption(KPOST_WEIGHTS, form.parcel_weight_kg).map((value) => (
@@ -319,6 +358,83 @@ function SaleStatusSelect({
   )
 }
 
+/** 상품 카드에서 일일·1회 한도를 바로 고친다. */
+function ProductQtyLimitsEditor({
+  product,
+  onSaved,
+}: {
+  product: Product
+  onSaved: () => void
+}) {
+  const [daily, setDaily] = useState(String(product.daily_qty_limit ?? 100))
+  const [perOrder, setPerOrder] = useState(String(product.per_order_qty_limit ?? 100))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setDaily(String(product.daily_qty_limit ?? 100))
+    setPerOrder(String(product.per_order_qty_limit ?? 100))
+    setError('')
+  }, [product.id, product.daily_qty_limit, product.per_order_qty_limit])
+
+  async function save() {
+    const dailyValue = Math.max(1, Number(daily) || 100)
+    const perOrderValue = Math.max(1, Number(perOrder) || 100)
+    if (
+      dailyValue === (product.daily_qty_limit ?? 100) &&
+      perOrderValue === (product.per_order_qty_limit ?? 100)
+    ) {
+      return
+    }
+    setSaving(true)
+    setError('')
+    const { error: updateError } = await supabase
+      .from('products')
+      .update({ daily_qty_limit: dailyValue, per_order_qty_limit: perOrderValue })
+      .eq('id', product.id)
+    setSaving(false)
+    if (updateError) {
+      setError(updateError.message)
+      return
+    }
+    setDaily(String(dailyValue))
+    setPerOrder(String(perOrderValue))
+    onSaved()
+  }
+
+  return (
+    <div className="mt-2 space-y-1.5">
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="text-[11px] font-medium text-muted">일일 한도</span>
+          <input
+            type="number"
+            min={1}
+            className="mt-0.5 w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            value={daily}
+            disabled={saving}
+            onChange={(e) => setDaily(e.target.value)}
+            onBlur={() => void save()}
+          />
+        </label>
+        <label className="block">
+          <span className="text-[11px] font-medium text-muted">1회 한도</span>
+          <input
+            type="number"
+            min={1}
+            className="mt-0.5 w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            value={perOrder}
+            disabled={saving}
+            onChange={(e) => setPerOrder(e.target.value)}
+            onBlur={() => void save()}
+          />
+        </label>
+      </div>
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+    </div>
+  )
+}
+
 function moveItem<T>(list: T[], from: number, to: number) {
   if (from === to || from < 0 || to < 0) return list
   const next = [...list]
@@ -346,6 +462,11 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
   const [imageRemoved, setImageRemoved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [farmDailyLimit, setFarmDailyLimit] = useState('100')
+  const [farmLimitMessage, setFarmLimitMessage] = useState('')
+  const [farmLimitError, setFarmLimitError] = useState('')
+  const [farmLimitSaving, setFarmLimitSaving] = useState(false)
+  const [cropFile, setCropFile] = useState<File | null>(null)
   const productsRef = useRef(products)
   const dragIdRef = useRef<string | null>(null)
   productsRef.current = products
@@ -366,6 +487,12 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
     onCountChange?.(list.length)
   }
 
+  async function loadFarmLimit() {
+    const { data } = await supabase.from('farms').select('daily_qty_limit').eq('id', farmId).maybeSingle()
+    const farm = data as Pick<Farm, 'daily_qty_limit'> | null
+    setFarmDailyLimit(String(farm?.daily_qty_limit ?? 100))
+  }
+
   useEffect(() => {
     setForm(emptyProductForm)
     setEditingId(null)
@@ -375,6 +502,9 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
     setSaving(false)
     setReordering(false)
     setDraggingId(null)
+    setFarmLimitMessage('')
+    setFarmLimitError('')
+    void loadFarmLimit()
     supabase
       .from('products')
       .select('*')
@@ -386,6 +516,24 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
         onCountChange?.(list.length)
       })
   }, [farmId, onCountChange])
+
+  async function saveFarmDailyLimit() {
+    setFarmLimitError('')
+    setFarmLimitMessage('')
+    const value = Math.max(1, Number(farmDailyLimit) || 100)
+    setFarmLimitSaving(true)
+    const { error: updateError } = await supabase
+      .from('farms')
+      .update({ daily_qty_limit: value })
+      .eq('id', farmId)
+    setFarmLimitSaving(false)
+    if (updateError) {
+      setFarmLimitError(updateError.message)
+      return
+    }
+    setFarmDailyLimit(String(value))
+    setFarmLimitMessage('저장했습니다.')
+  }
 
   function update<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -414,16 +562,20 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
   }
 
   function pickImage(file: File) {
-    void (async () => {
-      const prepared = await preparePublicImage(file)
-      if (typeof prepared === 'string') {
-        setError(prepared)
-        return
-      }
-      setError('')
-      setImageFile(prepared)
-      setImageRemoved(false)
-    })()
+    setError('')
+    setCropFile(file)
+  }
+
+  async function applyCroppedImage(cropped: File) {
+    setCropFile(null)
+    const prepared = await preparePublicImage(cropped)
+    if (typeof prepared === 'string') {
+      setError(prepared)
+      return
+    }
+    setError('')
+    setImageFile(prepared)
+    setImageRemoved(false)
   }
 
   function clearImage() {
@@ -488,7 +640,13 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
 
   async function save() {
     setError('')
-    const payload = formPayload(form)
+    let payload: ReturnType<typeof formPayload>
+    try {
+      payload = formPayload(form)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '입력을 확인하세요.')
+      return
+    }
     if (!payload.name || !Number.isFinite(payload.price) || payload.price < 0) {
       setError('상품명과 가격을 입력하세요.')
       return
@@ -539,9 +697,45 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
     />
   ) : null
 
+  const cropDialog = (
+    <ImageCropDialog
+      open={Boolean(cropFile)}
+      file={cropFile}
+      aspect={PRODUCT_IMAGE_ASPECT}
+      title="상품 사진 자르기"
+      hint="매장·상품 카드에 보이는 16:9 비율로 맞춰 자른 뒤 확인하세요."
+      onCancel={() => setCropFile(null)}
+      onConfirm={(next) => void applyCroppedImage(next)}
+    />
+  )
+
   if (isFarm) {
     return (
       <div className="space-y-4">
+        <Card className="space-y-3">
+          <h3 className="font-semibold">농가 일일 주문 한도 (전체)</h3>
+          <p className="text-xs text-muted">
+            오늘 이 농가에 들어온 <span className="font-medium text-gray-700">전체 수량</span>
+            기준입니다. 상품별 일일·1회 한도는 아래 각 상품 카드에서 따로 조정합니다. 넘어도
+            주문은 받으며 매장에서 경고만 표시합니다.
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[8rem] flex-1">
+              <Input
+                label="일일 전체 한도"
+                type="number"
+                min={1}
+                value={farmDailyLimit}
+                onChange={(e) => setFarmDailyLimit(e.target.value)}
+              />
+            </div>
+            <Button disabled={farmLimitSaving} onClick={() => void saveFarmDailyLimit()}>
+              {farmLimitSaving ? '저장 중...' : '저장'}
+            </Button>
+          </div>
+          <ErrorText>{farmLimitError}</ErrorText>
+          {farmLimitMessage ? <p className="text-sm text-primary">{farmLimitMessage}</p> : null}
+        </Card>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Button onClick={toggleAdd} disabled={reordering}>
@@ -597,25 +791,28 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
                     product={product}
                     extra={
                       reordering ? undefined : (
-                        <div className="mt-3 flex items-center gap-2">
-                          <SaleStatusSelect
-                            product={product}
-                            onChange={(status) => void setSaleStatus(product.id, status)}
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingId(product.id)
-                              setForm(productToForm(product))
-                              setImageFile(null)
-                              setImageRemoved(false)
-                              setError('')
-                              setFormOpen(true)
-                            }}
-                          >
-                            수정
-                          </Button>
+                        <div className="mt-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <SaleStatusSelect
+                              product={product}
+                              onChange={(status) => void setSaleStatus(product.id, status)}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingId(product.id)
+                                setForm(productToForm(product))
+                                setImageFile(null)
+                                setImageRemoved(false)
+                                setError('')
+                                setFormOpen(true)
+                              }}
+                            >
+                              수정
+                            </Button>
+                          </div>
+                          <ProductQtyLimitsEditor product={product} onSaved={() => void load()} />
                         </div>
                       )
                     }
@@ -625,7 +822,14 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
             })}
           </div>
         )}
-        <ProductImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
+        <ProductImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          targetFarmId={farmId}
+          nextSortOrder={products.reduce((max, product) => Math.max(max, product.sort_order), -1) + 1}
+          onImported={() => void load()}
+        />
+        {cropDialog}
       </div>
     )
   }
@@ -669,6 +873,7 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
           </div>
         </Card>
       ))}
+      {cropDialog}
     </div>
   )
 }

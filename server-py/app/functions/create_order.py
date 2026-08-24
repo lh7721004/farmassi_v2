@@ -1,10 +1,13 @@
 import re
+from datetime import datetime, timedelta, timezone
 
 from ..sb import sb
 from ..shared.mailer import send_order_mail
 from ..shared.push import notify_farm_members
 from ..shared.util import now_iso, random_code, seoul_date_compact
 from .types import FnCtx, FnResult, fail, ok
+
+_KST = timezone(timedelta(hours=9))
 
 
 def _normalize(value: str | None) -> str:
@@ -16,6 +19,7 @@ async def create_order(ctx: FnCtx) -> FnResult:
         return fail("로그인이 필요합니다.", 401)
     body = ctx.body
     recipient = body.get("recipient") or {}
+    sender = body.get("sender") or {}
     if not (body.get("farmId") and body.get("items") and recipient.get("name")
             and recipient.get("phone") and recipient.get("address")):
         return fail("주문 정보가 올바르지 않습니다.")
@@ -28,6 +32,17 @@ async def create_order(ctx: FnCtx) -> FnResult:
     # "찾을 수 없다" 고 하면 사용자가 주소를 잘못 눌렀다고 오해한다.
     if not farm["is_active"]:
         return fail("이 농가는 지금 주문을 받지 않습니다.", 409)
+
+    # 배송 일시정지 기간이면 받지 않는다. 화면에서도 버튼을 막지만 서버가
+    # 최종 판단을 해야 한다 — 화면만 막으면 우회할 수 있다.
+    pause_start, pause_end = farm.get("shipping_pause_start"), farm.get("shipping_pause_end")
+    if pause_start and pause_end:
+        today = datetime.now(_KST).strftime("%Y-%m-%d")
+        if pause_start <= today <= pause_end:   # 'YYYY-MM-DD' 는 사전순 비교가 곧 날짜 비교
+            reason = farm.get("shipping_pause_reason")
+            return fail(
+                f"{pause_start} ~ {pause_end} 배송이 멈춥니다."
+                + (f" ({reason})" if reason else ""), 409)
 
     products = (await db.from_("products").select("*")
                 .eq("farm_id", farm["id"]).eq("sale_status", "on_sale")
@@ -62,6 +77,12 @@ async def create_order(ctx: FnCtx) -> FnResult:
         "address": recipient["address"],
         "address_detail": recipient.get("addressDetail"),
         "request_memo": body.get("requestMemo"),
+        # 손님이 적은 입금자명. 없으면 수령인 이름으로 둔다 — 자동 대사가
+        # 후보를 넓게 잡을 수 있게 하려는 것이다.
+        "depositor_name": (sender.get("depositorName") or "").strip() or recipient["name"],
+        "sender_name": (sender.get("name") or "").strip() or None,
+        "sender_phone": (sender.get("phone") or "").strip() or None,
+        "sender_address": (sender.get("address") or "").strip() or None,
         "total_amount": total,
         "deposit_due_amount": total,
         "deposit_code": deposit_code,

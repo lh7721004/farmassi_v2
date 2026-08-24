@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ErrorText, PageSpinner } from '../../components/ui/Feedback'
+import { markProfilePending } from '../../lib/profileCompletion'
 import { supabase } from '../../lib/supabase'
 
 function safeNext(raw: string | null) {
@@ -37,12 +38,14 @@ export function AuthCallback() {
         if (exchangeError) {
           const { data } = await supabase.auth.getSession()
           if (data.session) {
+            if (params.get('profile') === '1') markProfilePending()
             go(next)
             return
           }
           setError(exchangeError.message)
           return
         }
+        if (params.get('profile') === '1') markProfilePending()
         go(next)
         return
       }

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, LocateFixed, MapPin, Search } from 'lucide-react'
-import { DeliveryEstimate } from '../../components/shared/DeliveryEstimate'
+import { ShippingScheduleNotice } from '../../components/shared/ShippingScheduleNotice'
+import { activeShippingPause, shippingPauseMessage } from '../../lib/shippingPause'
 import { Header } from '../../components/layout/Header'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -9,10 +10,17 @@ import { AddressPicker } from '../../components/shared/AddressPicker'
 import { Input } from '../../components/ui/Field'
 import { PhoneField } from '../../components/ui/PhoneField'
 import { RequestMemoField } from '../../components/ui/RequestMemoField'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { ErrorText, PageSpinner } from '../../components/ui/Feedback'
 import { clearCart, getCart } from '../../lib/cart'
 import { formatPrice } from '../../lib/format'
 import { invokeFunction } from '../../lib/functions'
+import {
+  emptyTodayQty,
+  isQtyVolumeExceeded,
+  QTY_VOLUME_WARNING,
+  type TodayQty,
+} from '../../lib/qtyLimits'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { isProductOrderable, type Farm, type Product, type SavedAddress } from '../../types/models'
@@ -33,6 +41,8 @@ export function Checkout() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [todayQty, setTodayQty] = useState<TodayQty>(emptyTodayQty())
+  const [volumeDialogOpen, setVolumeDialogOpen] = useState(false)
   const [form, setForm] = useState({
     recipient_name: '',
     phone: '',
@@ -63,12 +73,16 @@ export function Checkout() {
       const farmData = farmRow as Farm | null
       setFarm(farmData)
       if (farmData) {
-        const { data: productRows } = await supabase
-          .from('products')
-          .select('*')
-          .eq('farm_id', farmData.id)
-          .eq('sale_status', 'on_sale')
+        const [{ data: productRows }, qty] = await Promise.all([
+          supabase
+            .from('products')
+            .select('*')
+            .eq('farm_id', farmData.id)
+            .eq('sale_status', 'on_sale'),
+          invokeFunction<TodayQty>('farm-today-qty', { farmId: farmData.id }).catch(() => emptyTodayQty()),
+        ])
         setProducts((productRows as Product[]) ?? [])
+        setTodayQty(qty)
       }
       if (user) {
         const { data: addrRows } = await supabase
@@ -105,7 +119,54 @@ export function Checkout() {
       product,
       quantity: qtyById[product.id] ?? 0,
     }))
+  const pause = activeShippingPause(farm)
   const total = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0)
+  const volumeWarning = Boolean(
+    farm &&
+      isQtyVolumeExceeded({
+        farm,
+        products,
+        cart,
+        today: todayQty,
+      }),
+  )
+
+  async function placeOrder() {
+    setError('')
+    if (!form.address.trim()) {
+      setError('배송지를 현재 위치 또는 검색으로 설정해 주세요.')
+      return
+    }
+    if (!farm) return
+    setPending(true)
+    try {
+      const result = await invokeFunction<CheckoutResult>('create-order', {
+        farmId: farm.id,
+        sender: {
+          depositorName: senderUi.depositorName,
+          name: senderUi.name,
+          phone: senderUi.phone,
+          address: senderUi.addressDetail,
+        },
+        items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
+        recipient: {
+          name: form.recipient_name,
+          phone: form.phone,
+          zonecode: form.zonecode,
+          address: form.address,
+          addressDetail: form.address_detail,
+        },
+        requestMemo: form.request_memo,
+        saveAddress: alreadySavedAddress(addresses, form) ? false : selectedAddressId === 'new' && saveAddress,
+      })
+      clearCart(farmSlug)
+      await refresh()
+      navigate(`/me/orders/${result.orderId}/complete`, { replace: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '주문에 실패했습니다.')
+      setPending(false)
+    }
+  }
 
   if (loading) return <PageSpinner />
   if (pending) return <PageSpinner label="주문을 처리하는 중..." />
@@ -131,35 +192,13 @@ export function Checkout() {
       <Header title="주문하기" showBack backTo={`/farm/${farmSlug}`} />
       <form
         className="px-4 py-4 md:px-6 max-w-lg mx-auto space-y-4"
-        onSubmit={async (e) => {
+        onSubmit={(e) => {
           e.preventDefault()
-          setError('')
-          if (!form.address.trim()) {
-            setError('배송지를 현재 위치 또는 검색으로 설정해 주세요.')
+          if (volumeWarning) {
+            setVolumeDialogOpen(true)
             return
           }
-          setPending(true)
-          try {
-            const result = await invokeFunction<CheckoutResult>('create-order', {
-              farmId: farm.id,
-              items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
-              recipient: {
-                name: form.recipient_name,
-                phone: form.phone,
-                zonecode: form.zonecode,
-                address: form.address,
-                addressDetail: form.address_detail,
-              },
-              requestMemo: form.request_memo,
-              saveAddress: alreadySavedAddress(addresses, form) ? false : selectedAddressId === 'new' && saveAddress,
-            })
-            clearCart(farmSlug)
-            await refresh()
-            navigate(`/me/orders/${result.orderId}/complete`, { replace: true })
-          } catch (err) {
-            setError(err instanceof Error ? err.message : '주문에 실패했습니다.')
-            setPending(false)
-          }
+          void placeOrder()
         }}
       >
         <Card>
@@ -357,7 +396,18 @@ export function Checkout() {
           )}
         </Card>
 
-        <DeliveryEstimate days={farm.delivery_days} />
+        {pause ? (
+          <Card className="border-amber-200 bg-amber-50">
+            <p className="text-sm text-amber-900">{shippingPauseMessage(pause)}</p>
+          </Card>
+        ) : (
+          <ShippingScheduleNotice
+            days={farm.delivery_days}
+            farm={farm}
+            volumeWarning={volumeWarning}
+            volumeWarningMessage={QTY_VOLUME_WARNING}
+          />
+        )}
 
         <Card className="bg-primary-light border-primary/20">
           <p className="text-sm text-gray-800">
@@ -366,10 +416,26 @@ export function Checkout() {
         </Card>
 
         <ErrorText>{error}</ErrorText>
-        <Button type="submit" fullWidth size="lg" disabled={pending || !farm?.is_active}>
-          {!farm?.is_active ? '지금은 주문을 받지 않습니다' : `${formatPrice(total)} 주문하기`}
+        <Button type="submit" fullWidth size="lg" disabled={pending || !farm?.is_active || Boolean(pause)}>
+          {!farm?.is_active
+            ? '지금은 주문을 받지 않습니다'
+            : pause
+              ? '배송 일시정지 중입니다'
+              : `${formatPrice(total)} 주문하기`}
         </Button>
       </form>
+      <ConfirmDialog
+        open={volumeDialogOpen}
+        title="배송 일정 확인"
+        description={QTY_VOLUME_WARNING}
+        confirmLabel="확인하고 주문하기"
+        pending={pending}
+        onCancel={() => setVolumeDialogOpen(false)}
+        onConfirm={() => {
+          setVolumeDialogOpen(false)
+          void placeOrder()
+        }}
+      />
     </div>
   )
 }

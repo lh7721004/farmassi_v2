@@ -1,9 +1,10 @@
 import { ImagePlus, Plus, X } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '../ui/Button'
 import { Textarea } from '../ui/Field'
 import { deletePublicImage, preparePublicImage, uploadFarmImage } from '../../lib/storageImages'
 import { parseLandingBlocks, type FarmLandingBlock } from '../../types/models'
+import { ImageCropDialog } from './ImageCropDialog'
 
 export interface LandingBlockDraft {
   id: string
@@ -94,8 +95,8 @@ function BlockImage({
 
   if (preview) {
     return (
-      <div className="relative mt-1 overflow-hidden rounded-xl border border-gray-200">
-        <img src={preview} alt="" className="h-40 w-full object-cover" />
+      <div className="relative mt-1 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+        <img src={preview} alt="" className="block w-full h-auto" />
         <div className="absolute right-2 top-2 flex gap-1">
           <span className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-white/95 px-3 text-xs font-medium text-gray-700 shadow-sm">
             변경
@@ -133,18 +134,31 @@ export function LandingBlocksField({
   slug?: string
   onError?: (message: string) => void
 }) {
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropBlockId, setCropBlockId] = useState<string | null>(null)
+
   function update(id: string, patch: Partial<LandingBlockDraft>) {
     onChange(blocks.map((block) => (block.id === id ? { ...block, ...patch } : block)))
   }
 
-  async function pickImage(id: string, file: File) {
-    const prepared = await preparePublicImage(file)
+  function openCrop(id: string, file: File) {
+    setCropBlockId(id)
+    setCropFile(file)
+    onError?.('')
+  }
+
+  async function applyCrop(cropped: File) {
+    const blockId = cropBlockId
+    setCropFile(null)
+    setCropBlockId(null)
+    if (!blockId) return
+    const prepared = await preparePublicImage(cropped)
     if (typeof prepared === 'string') {
       onError?.(prepared)
       return
     }
     onError?.('')
-    update(id, { file: prepared, imageCleared: false })
+    update(blockId, { file: prepared, imageCleared: false })
   }
 
   return (
@@ -155,7 +169,8 @@ export function LandingBlocksField({
       <div>
         <p className="text-xs font-medium text-muted">랜딩페이지</p>
         <p className="mt-0.5 text-xs text-muted">
-          /farm/{slug || '...'}/landingpage 에 사진과 설명이 순서대로 표시됩니다.
+          /farm/{slug || '...'}/landingpage 에 사진과 설명이 순서대로 표시됩니다. 사진은 원하는
+          비율로 잘라 올립니다.
           {slug ? (
             <>
               {' '}
@@ -191,7 +206,7 @@ export function LandingBlocksField({
             <BlockImage
               file={block.file}
               url={block.imageCleared ? null : block.image_url}
-              onPick={(file) => void pickImage(block.id, file)}
+              onPick={(file) => openCrop(block.id, file)}
               onClear={() => update(block.id, { file: null, imageCleared: true })}
             />
           </div>
@@ -212,6 +227,18 @@ export function LandingBlocksField({
         <Plus className="h-4 w-4" />
         사진·설명 추가
       </Button>
+      <ImageCropDialog
+        open={Boolean(cropFile)}
+        file={cropFile}
+        aspect={null}
+        title="랜딩 사진 자르기"
+        hint="화면에 보일 부분을 자유롭게 선택한 뒤 확인하세요. 자른 비율 그대로 랜딩페이지에 표시됩니다."
+        onCancel={() => {
+          setCropFile(null)
+          setCropBlockId(null)
+        }}
+        onConfirm={(next) => void applyCrop(next)}
+      />
     </div>
   )
 }

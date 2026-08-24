@@ -5,7 +5,7 @@ import { NotificationBell } from '../../components/notifications/NotificationBel
 import { OrderItem } from '../../components/shared/OrderItem'
 import { ShippingPausePanel } from '../../components/shared/ShippingPausePanel'
 import { useFarmWorkspace } from '../../lib/farmWorkspace'
-import { toOrderListModel, type OrderRow } from '../../lib/orders'
+import { sortShipmentOrders, toOrderListModel, type OrderRow } from '../../lib/orders'
 import { supabase } from '../../lib/supabase'
 
 export function FarmDelivery() {
@@ -19,7 +19,7 @@ export function FarmDelivery() {
       .eq('farm_id', farm.id)
       .in('status', ['paid', 'packing'])
       .order('created_at', { ascending: false })
-      .then(({ data }) => setOrders((data as OrderRow[]) ?? []))
+      .then(({ data }) => setOrders(sortShipmentOrders((data as OrderRow[]) ?? [])))
   }, [farm.id])
 
   return (
@@ -35,7 +35,7 @@ export function FarmDelivery() {
         }
       />
       <div className="px-4 py-4 md:px-6 max-w-5xl mx-auto space-y-3">
-        <ShippingPausePanel farmName={farm.name} />
+        <ShippingPausePanel farmName={farm.name} farms={[{ id: farm.id, name: farm.name }]} />
         {orders.map((order) => (
           <OrderItem key={order.id} order={toOrderListModel(order)} />
         ))}

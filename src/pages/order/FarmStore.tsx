@@ -7,9 +7,18 @@ import { ProductCard } from '../../components/shared/ProductCard'
 import { ShippingScheduleNotice } from '../../components/shared/ShippingScheduleNotice'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { PageSpinner } from '../../components/ui/Feedback'
 import { getCart, setCart, type CartItem } from '../../lib/cart'
 import { formatPrice, kakaoChannelHref } from '../../lib/format'
+import { invokeFunction } from '../../lib/functions'
+import {
+  emptyTodayQty,
+  isQtyVolumeExceeded,
+  QTY_VOLUME_WARNING,
+  type TodayQty,
+} from '../../lib/qtyLimits'
+import { activeShippingPause } from '../../lib/shippingPause'
 import { useAuth } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 import { isProductOrderable, type Farm, type Product } from '../../types/models'
@@ -22,6 +31,8 @@ export function FarmStore() {
   const [farm, setFarm] = useState<Farm | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [cart, setCartState] = useState<CartItem[]>([])
+  const [todayQty, setTodayQty] = useState<TodayQty>(emptyTodayQty())
+  const [volumeDialogOpen, setVolumeDialogOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -36,25 +47,40 @@ export function FarmStore() {
       }
       const farmData = farmRow as Farm
       setFarm(farmData)
-      const { data: productRows } = await supabase
-        .from('products')
-        .select('*')
-        .eq('farm_id', farmData.id)
-        .eq('is_active', true)
-        .order('sort_order')
+      const [{ data: productRows }, qty] = await Promise.all([
+        supabase
+          .from('products')
+          .select('*')
+          .eq('farm_id', farmData.id)
+          .eq('is_active', true)
+          .order('sort_order'),
+        invokeFunction<TodayQty>('farm-today-qty', { farmId: farmData.id }).catch(() => emptyTodayQty()),
+      ])
       setProducts((productRows as Product[]) ?? [])
+      setTodayQty(qty)
       setLoading(false)
     }
     void load()
   }, [farmSlug])
 
-  // 농가가 비활성이면 담기·주문을 막는다. 구경과 문의는 그대로 가능하다.
-  const orderingClosed = Boolean(farm && !farm.is_active)
+  // 농가가 비활성이거나 배송 정지 중이면 담기·주문을 막는다. 구경과 문의는 그대로 가능하다.
+  const pause = activeShippingPause(farm)
+  const orderingClosed = Boolean(farm && (!farm.is_active || pause))
 
   const qtyById = useMemo(() => Object.fromEntries(cart.map((item) => [item.productId, item.quantity])), [cart])
   const selected = products.filter((product) => isProductOrderable(product) && (qtyById[product.id] ?? 0) > 0)
   const selectedCount = selected.reduce((sum, product) => sum + (qtyById[product.id] ?? 0), 0)
   const total = selected.reduce((sum, product) => sum + product.price * (qtyById[product.id] ?? 0), 0)
+
+  const volumeWarning = Boolean(
+    farm &&
+      isQtyVolumeExceeded({
+        farm,
+        products,
+        cart,
+        today: todayQty,
+      }),
+  )
 
   function updateQty(productId: string, quantity: number) {
     const product = products.find((item) => item.id === productId)
@@ -63,6 +89,12 @@ export function FarmStore() {
     if (quantity > 0) next.push({ productId, quantity })
     setCart(farmSlug, next)
     setCartState(next)
+  }
+
+  function goCheckout() {
+    const path = `/farm/${farmSlug}/checkout`
+    if (user) navigate(path)
+    else openLogin({ next: path })
   }
 
   const kakaoHref = kakaoChannelHref(farm?.kakao_channel_url)
@@ -116,7 +148,12 @@ export function FarmStore() {
             <p className="text-sm text-gray-700">{farm.description || farm.product_summary}</p>
           </Card>
         ) : null}
-        <ShippingScheduleNotice />
+        <ShippingScheduleNotice
+          days={farm.delivery_days}
+          farm={farm}
+          volumeWarning={volumeWarning}
+          volumeWarningMessage={QTY_VOLUME_WARNING}
+        />
         {products.length === 0 ? (
           <p className="text-center text-muted py-10">판매 중인 상품이 없습니다</p>
         ) : (
@@ -126,7 +163,7 @@ export function FarmStore() {
                 key={product.id}
                 product={product}
                 quantity={qtyById[product.id] ?? 0}
-                onChangeQuantity={(qty) => updateQty(product.id, qty)}
+                onChangeQuantity={orderingClosed ? undefined : (qty) => updateQty(product.id, qty)}
               />
             ))}
           </div>
@@ -134,9 +171,13 @@ export function FarmStore() {
       </div>
       {orderingClosed && (
         <div className="mx-4 mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm font-semibold text-amber-900">지금은 주문을 받지 않습니다</p>
+          <p className="text-sm font-semibold text-amber-900">
+            {pause ? '배송 일시정지 중입니다' : '지금은 주문을 받지 않습니다'}
+          </p>
           <p className="mt-1 text-xs text-amber-800">
-            상품과 농가 정보는 그대로 보실 수 있습니다. 주문은 잠시 멈춰 있습니다.
+            {pause
+              ? '상품과 농가 정보는 그대로 보실 수 있습니다. 정지 기간이 지나면 다시 주문할 수 있습니다.'
+              : '상품과 농가 정보는 그대로 보실 수 있습니다. 주문은 잠시 멈춰 있습니다.'}
           </p>
         </div>
       )}
@@ -150,9 +191,8 @@ export function FarmStore() {
             <Button
               size="lg"
               onClick={() => {
-                const path = `/farm/${farmSlug}/checkout`
-                if (user) navigate(path)
-                else openLogin({ next: path })
+                if (volumeWarning) setVolumeDialogOpen(true)
+                else goCheckout()
               }}
             >
               주문하기
@@ -160,6 +200,17 @@ export function FarmStore() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={volumeDialogOpen}
+        title="배송 일정 확인"
+        description={QTY_VOLUME_WARNING}
+        confirmLabel="확인하고 주문하기"
+        onCancel={() => setVolumeDialogOpen(false)}
+        onConfirm={() => {
+          setVolumeDialogOpen(false)
+          goCheckout()
+        }}
+      />
     </div>
   )
 }

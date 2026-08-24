@@ -76,7 +76,7 @@ export const scrapeDeposits: FnHandler = async ({ userId, body, admin }) => {
     let candidates: CandidateOrder[] = []
     if (farmId) {
       const { data: orders } = await db.from('orders')
-        .select('id, deposit_due_amount, deposit_code, recipient_name')
+        .select('id, deposit_due_amount, deposit_code, recipient_name, depositor_name')
         .eq('farm_id', farmId).eq('status', 'pending_deposit')
       candidates = (orders ?? []) as CandidateOrder[]
     }
@@ -158,7 +158,7 @@ async function rematchUnmatched(db: ReturnType<typeof sb>, admin: any): Promise<
     if (!deposit.farm_id) continue
 
     const { data: orders } = await db.from('orders')
-      .select('id, deposit_due_amount, deposit_code, recipient_name')
+      .select('id, deposit_due_amount, deposit_code, recipient_name, depositor_name')
       .eq('farm_id', deposit.farm_id).eq('status', 'pending_deposit')
 
     const match = matchDeposit(

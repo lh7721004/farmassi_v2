@@ -3,6 +3,7 @@ import { ApiErrorNotice } from './components/shared/ApiErrorNotice'
 import { GoogleAnalytics } from './components/shared/GoogleAnalytics'
 import { RedirectToFarmWorkspace, RequireAdmin, RequireAuth, RequireFarmWorkspace } from './components/auth/Guards'
 import { LoginSheetProvider } from './components/auth/LoginSheet'
+import { ProfileCompletionProvider } from './components/auth/ProfileCompletionProvider'
 import { Landing } from './pages/Landing'
 import { Login } from './pages/auth/Login'
 import { AuthCallback } from './pages/auth/AuthCallback'
@@ -36,6 +37,7 @@ export default function App() {
     <BrowserRouter>
       <GoogleAnalytics />
       <LoginSheetProvider>
+        <ProfileCompletionProvider>
         <ApiErrorNotice />
         <Routes>
         <Route path="/" element={<Landing />} />
@@ -158,6 +160,7 @@ export default function App() {
         <Route path="/settings" element={<RedirectToFarmWorkspace suffix="/settings" />} />
         <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </ProfileCompletionProvider>
       </LoginSheetProvider>
     </BrowserRouter>
   )

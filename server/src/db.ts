@@ -16,6 +16,9 @@ const asPostgrestTimestamp = (value: string | null) =>
 
 types.setTypeParser(1184, asPostgrestTimestamp)  // timestamptz
 types.setTypeParser(1114, (v: string | null) => (v === null ? null : v.replace(' ', 'T')))  // timestamp
+// date 는 'YYYY-MM-DD' 그대로 둔다. 기본값은 JS Date 라 JSON 에서 '...T00:00:00.000Z'
+// 가 되는데, 화면의 date 입력은 'YYYY-MM-DD' 를 쓴다.
+types.setTypeParser(1082, (v: string | null) => v)  // date
 
 /**
  * 접속 풀 두 개.
