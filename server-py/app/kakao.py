@@ -136,10 +136,14 @@ async def callback_url(code: str | None, state: str | None) -> str:
                 "select user_id from auth.identities"
                 " where provider = 'kakao' and provider_user_id = $1", kakao_id)
             if found:
-                # 닉네임/사진이 바뀌었을 수 있으니 갱신한다.
+                # 프로필을 직접 입력한 사용자의 이름은 유지하고, 사진만 갱신한다.
                 await conn.execute(
-                    "update public.profiles set display_name = $2,"
-                    " avatar_url = coalesce($3, avatar_url) where id = $1",
+                    "update public.profiles set"
+                    " display_name = case"
+                    " when phone is null or btrim(phone) = '' then $2"
+                    " else display_name end,"
+                    " avatar_url = coalesce($3, avatar_url)"
+                    " where id = $1",
                     found, nickname, avatar)
                 user_id = found
             else:
@@ -153,6 +157,12 @@ async def callback_url(code: str | None, state: str | None) -> str:
                     "insert into auth.identities (provider, provider_user_id, user_id)"
                     " values ('kakao', $1, $2)", kakao_id, user_id)
 
-        return _with_param(target, "code", sign(user_id))
+        async with db.with_admin() as conn:
+            phone = await conn.fetchval(
+                "select phone from public.profiles where id = $1", user_id)
+        redirect = _with_param(target, "code", sign(user_id))
+        if not (phone or "").strip():
+            redirect = _with_param(redirect, "profile", "1")
+        return redirect
     except Exception as error:  # noqa: BLE001
         return bail(str(error) or "로그인에 실패했습니다.")
