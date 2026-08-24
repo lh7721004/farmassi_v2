@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { Pencil, Check, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { Pencil, Check, ChevronLeft, ChevronRight, Download, Minus, Plus } from 'lucide-react'
 import { AppShell } from '../../components/layout/AppShell'
 import { Header } from '../../components/layout/Header'
 import { Button } from '../../components/ui/Button'
@@ -35,6 +35,8 @@ interface DummyFarm {
 interface DayRecord {
   date: string
   cells: Record<string, Record<Channel, FarmCell>>
+  /** 농원별 품목 건수. 합계는 그날 해당 농원 송장 건수를 넘을 수 없다. */
+  productQty: Record<string, Record<string, number>>
 }
 
 const emptyCell = (): FarmCell => ({ count: 0, receiptText: '' })
@@ -53,6 +55,56 @@ const DUMMY_FARMS: DummyFarm[] = [
   { id: 'takine', name: '탁이네 농원', deliveryDays: [0, 1, 2, 4] },
   { id: 'jinyoung', name: '진영농원', deliveryDays: [0, 2, 4, 6] },
 ]
+
+/** 농원별 판매 품목 더미 */
+const DUMMY_PRODUCTS: Record<string, { id: string; name: string }[]> = {
+  jooyoung: [
+    { id: 'jy-peach', name: '복숭아 2kg' },
+    { id: 'jy-grape', name: '캠벨포도 2kg' },
+    { id: 'jy-apple', name: '사과 5kg' },
+  ],
+  takine: [
+    { id: 'tk-plum', name: '자두 2kg' },
+    { id: 'tk-peach', name: '백도복숭아 2kg' },
+    { id: 'tk-tomato', name: '방울토마토 1kg' },
+  ],
+  jinyoung: [
+    { id: 'jn-pear', name: '배 5kg' },
+    { id: 'jn-persimmon', name: '단감 5kg' },
+    { id: 'jn-chestnut', name: '밤 2kg' },
+  ],
+}
+
+function emptyProductQty(): Record<string, Record<string, number>> {
+  return Object.fromEntries(
+    DUMMY_FARMS.map((farm) => [
+      farm.id,
+      Object.fromEntries((DUMMY_PRODUCTS[farm.id] ?? []).map((p) => [p.id, 0])),
+    ]),
+  )
+}
+
+function productQtySum(qty: Record<string, number> | undefined): number {
+  if (!qty) return 0
+  return Object.values(qty).reduce((sum, n) => sum + n, 0)
+}
+
+function clampFarmProductQty(
+  qty: Record<string, number>,
+  maxTotal: number,
+): Record<string, number> {
+  const next = { ...qty }
+  let sum = productQtySum(next)
+  if (sum <= maxTotal) return next
+  // 초과분만큼 뒤에서부터 깎는다
+  for (const id of Object.keys(next).reverse()) {
+    if (sum <= maxTotal) break
+    const cut = Math.min(next[id], sum - maxTotal)
+    next[id] -= cut
+    sum -= cut
+  }
+  return next
+}
 
 /**
  * 서비스 주문 자동 집계 더미.
@@ -88,12 +140,14 @@ function createEmptyDay(date: string): DayRecord {
   return applyFarmassiAuto({
     date,
     cells: Object.fromEntries(DUMMY_FARMS.map((f) => [f.id, emptyFarmCells()])),
+    productQty: emptyProductQty(),
   })
 }
 
 const SEED_DAYS: DayRecord[] = [
   applyFarmassiAuto({
     date: '2026-08-23',
+    productQty: emptyProductQty(),
     cells: {
       jooyoung: {
         직접연락: { count: 3, receiptText: '2026082361450019' },
@@ -114,6 +168,7 @@ const SEED_DAYS: DayRecord[] = [
   }),
   applyFarmassiAuto({
     date: '2026-08-24',
+    productQty: emptyProductQty(),
     cells: {
       jooyoung: {
         직접연락: { count: 2, receiptText: '2026082461529815' },
@@ -358,14 +413,42 @@ export function AdminShippingHistory() {
     setDays((prev) =>
       prev.map((day) => {
         if (day.date !== date) return day
+        const cells = {
+          ...day.cells,
+          [farmId]: {
+            ...day.cells[farmId],
+            [channel]: next,
+          },
+        }
+        const maxTotal = farmDayTotal(cells[farmId])
         return {
           ...day,
-          cells: {
-            ...day.cells,
-            [farmId]: {
-              ...day.cells[farmId],
-              [channel]: next,
-            },
+          cells,
+          productQty: {
+            ...day.productQty,
+            [farmId]: clampFarmProductQty(day.productQty[farmId] ?? {}, maxTotal),
+          },
+        }
+      }),
+    )
+  }
+
+  function bumpProductQty(date: string, farmId: string, productId: string, delta: number) {
+    setDays((prev) =>
+      prev.map((day) => {
+        if (day.date !== date) return day
+        const maxTotal = farmDayTotal(day.cells[farmId])
+        const current = { ...(day.productQty[farmId] ?? {}) }
+        const allocated = productQtySum(current)
+        const value = current[productId] ?? 0
+        if (delta > 0 && allocated >= maxTotal) return day
+        if (delta < 0 && value <= 0) return day
+        current[productId] = Math.max(0, value + delta)
+        return {
+          ...day,
+          productQty: {
+            ...day.productQty,
+            [farmId]: clampFarmProductQty(current, maxTotal),
           },
         }
       }),
@@ -789,6 +872,105 @@ export function AdminShippingHistory() {
                         </Fragment>
                       ))}
                       <td className="px-3 py-2.5 text-right tabular-nums">{dayGrand}</td>
+                    </tr>
+                    <tr className="border-t border-gray-100">
+                      <td className="px-3 py-2.5 align-top text-sm font-medium text-gray-800">
+                        팔린 물건
+                      </td>
+                      {DUMMY_FARMS.map((farm) => {
+                        const target = farmDayTotal(day.cells[farm.id])
+                        const qtyMap = day.productQty[farm.id] ?? {}
+                        const allocated = productQtySum(qtyMap)
+                        const remaining = Math.max(0, target - allocated)
+                        const products = DUMMY_PRODUCTS[farm.id] ?? []
+                        const canEditProducts = editable && target > 0
+                        const matched = target > 0 && allocated === target
+                        return (
+                          <td
+                            key={farm.id}
+                            colSpan={2}
+                            className="px-2 py-2.5 align-top"
+                          >
+                            {target === 0 ? (
+                              <span className="text-xs text-muted">—</span>
+                            ) : (
+                              <div className="space-y-1.5">
+                                <p
+                                  className={[
+                                    'text-[11px] tabular-nums',
+                                    matched ? 'text-primary' : 'text-amber-700',
+                                  ].join(' ')}
+                                >
+                                  {allocated}/{target}건
+                                  {!matched && remaining > 0 ? ` · ${remaining}건 남음` : ''}
+                                  {!matched && remaining === 0 && allocated > target
+                                    ? ' · 초과'
+                                    : ''}
+                                </p>
+                                <ul className="space-y-1">
+                                  {products.map((product) => {
+                                    const qty = qtyMap[product.id] ?? 0
+                                    return (
+                                      <li
+                                        key={product.id}
+                                        className="flex items-center gap-1.5 text-xs"
+                                      >
+                                        <span className="min-w-0 flex-1 truncate text-gray-700">
+                                          {product.name}
+                                        </span>
+                                        {canEditProducts ? (
+                                          <div className="flex shrink-0 items-center gap-0.5">
+                                            <button
+                                              type="button"
+                                              aria-label={`${product.name} 감소`}
+                                              disabled={qty <= 0}
+                                              onClick={() =>
+                                                bumpProductQty(
+                                                  day.date,
+                                                  farm.id,
+                                                  product.id,
+                                                  -1,
+                                                )
+                                              }
+                                              className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30"
+                                            >
+                                              <Minus className="h-3 w-3" />
+                                            </button>
+                                            <span className="w-5 text-center tabular-nums font-medium">
+                                              {qty}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              aria-label={`${product.name} 증가`}
+                                              disabled={remaining <= 0}
+                                              onClick={() =>
+                                                bumpProductQty(
+                                                  day.date,
+                                                  farm.id,
+                                                  product.id,
+                                                  1,
+                                                )
+                                              }
+                                              className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30"
+                                            >
+                                              <Plus className="h-3 w-3" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <span className="w-5 shrink-0 text-center tabular-nums text-muted">
+                                            {qty || '—'}
+                                          </span>
+                                        )}
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                              </div>
+                            )}
+                          </td>
+                        )
+                      })}
+                      <td className="px-3 py-2.5" />
                     </tr>
                   </tbody>
                 </table>
