@@ -1,6 +1,11 @@
-import { Truck } from 'lucide-react'
+import { PauseCircle, Truck } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { deliveryDaysLabel, formatDeliveryDate, nextDeliveryDate } from '../../lib/deliveryDays'
+import {
+  activeShippingPause,
+  shippingPauseMessage,
+  type ShippingPauseFields,
+} from '../../lib/shippingPause'
 
 /**
  * 예상 배송일정 안내.
@@ -11,6 +16,8 @@ import { deliveryDaysLabel, formatDeliveryDate, nextDeliveryDate } from '../../l
  *
  * 출고는 빨라야 다음날이다 — 주문이 들어온 뒤 수확하기 때문이다. 그래서
  * 가장 가까운 배송일도 오늘이 아니라 내일부터 찾는다.
+ *
+ * 배송 일시정지 기간이면 예상일 대신 정지 안내를 보여준다.
  */
 const ETA_DAYS = 3
 
@@ -36,9 +43,28 @@ function tomorrowInSeoul(): Date {
 interface ShippingScheduleNoticeProps {
   /** 농가가 정한 배송 가능 요일. 비어 있으면 일반 안내를 쓴다. */
   days?: number[] | null
+  farm?: ShippingPauseFields | null
 }
 
-export function ShippingScheduleNotice({ days }: ShippingScheduleNoticeProps = {}) {
+export function ShippingScheduleNotice({ days, farm }: ShippingScheduleNoticeProps = {}) {
+  const pause = activeShippingPause(farm)
+  if (pause) {
+    return (
+      <Card className="flex items-start gap-2 border-amber-200 bg-amber-50 px-3 py-2.5">
+        <PauseCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+        <div className="min-w-0">
+          <p className="text-[13px] leading-snug text-amber-950">
+            <span className="font-semibold">배송 일시정지</span>
+            <span className="ml-1.5">{shippingPauseMessage(pause)}</span>
+          </p>
+          <p className="mt-0.5 text-xs leading-snug text-amber-800">
+            이 기간에는 주문을 받지 않습니다. 기간이 지나면 다시 주문할 수 있습니다.
+          </p>
+        </div>
+      </Card>
+    )
+  }
+
   const label = deliveryDaysLabel(days ?? [])
   const shipDate = label ? nextDeliveryDate(days ?? [], tomorrowInSeoul()) : null
 

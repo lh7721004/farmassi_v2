@@ -370,7 +370,7 @@ export function Checkout() {
             <p className="text-sm text-amber-900">{shippingPauseMessage(pause)}</p>
           </Card>
         ) : (
-          <ShippingScheduleNotice days={farm.delivery_days} />
+          <ShippingScheduleNotice days={farm.delivery_days} farm={farm} />
         )}
 
         <Card className="bg-primary-light border-primary/20">
