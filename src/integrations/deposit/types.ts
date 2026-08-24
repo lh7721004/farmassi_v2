@@ -5,7 +5,7 @@
  * and call the same confirm-deposit entrypoint.
  */
 
-export type DepositProviderId = 'manual' | 'gnd' | 'hecto' | 'banksalad' | 'codef' | 'bankda'
+export type DepositProviderId = 'manual' | 'gnd' | 'hecto' | 'banksalad' | 'codef' | 'bankda' | 'callback'
 
 export interface PolledDeposit {
   occurredAt: string

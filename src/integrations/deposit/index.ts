@@ -2,6 +2,7 @@ import type { DepositProvider, DepositProviderId } from './types'
 import { banksaladDepositProvider } from './providers/banksalad'
 import { bankdaDepositProvider } from './providers/bankda'
 import { codefDepositProvider } from './providers/codef'
+import { callbackDepositProvider } from './providers/callback'
 import { gndDepositProvider } from './providers/gnd'
 import { hectoDepositProvider } from './providers/hecto'
 import { manualDepositProvider } from './providers/manual'
@@ -13,6 +14,7 @@ const providers: Record<DepositProviderId, DepositProvider> = {
   banksalad: banksaladDepositProvider,
   codef: codefDepositProvider,
   bankda: bankdaDepositProvider,
+  callback: callbackDepositProvider,
 }
 
 export function getDepositProvider(id: DepositProviderId = 'manual'): DepositProvider {
