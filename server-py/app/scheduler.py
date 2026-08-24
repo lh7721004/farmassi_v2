@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from . import db
 from .functions import FUNCTIONS, FnCtx
 from .shared.bankda import list_accounts
+from .shared.holidays import sync as sync_holidays
 
 _KST = timezone(timedelta(hours=9))
 
@@ -74,6 +75,20 @@ async def _tick() -> None:
         log(f"입금 조회 실패: {error}")
 
 
+async def _holiday_loop() -> None:
+    """공휴일은 자주 바뀌지 않는다. 기동 직후 한 번, 그 뒤 하루에 한 번."""
+    await asyncio.sleep(30)
+    while True:
+        try:
+            async with db.with_admin() as conn:
+                count = await sync_holidays(conn)
+            if count:
+                log(f"공휴일 동기화: {count}건")
+        except Exception as error:  # noqa: BLE001
+            log(f"공휴일 동기화 실패: {error}")
+        await asyncio.sleep(86400)
+
+
 async def _loop(minutes: float) -> None:
     await asyncio.sleep(20)
     while True:
@@ -89,7 +104,10 @@ def start_scheduler() -> asyncio.Task | None:
         minutes = float("nan")
     if not (minutes == minutes) or minutes <= 0:   # NaN 또는 0 이하
         log("입금 자동조회: 꺼짐")
+        # 입금 조회를 꺼도 공휴일은 받는다. 예상 배송일 계산에 쓰이기 때문이다.
+        asyncio.create_task(_holiday_loop())
         return None
 
     log(f"입금 자동조회: {minutes:g}분마다 갱신 여부 확인 (거래내역은 갱신됐을 때만 호출)")
+    asyncio.create_task(_holiday_loop())
     return asyncio.create_task(_loop(minutes))

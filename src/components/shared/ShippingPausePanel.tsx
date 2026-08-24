@@ -96,23 +96,27 @@ export function ShippingPausePanel({
     let alive = true
     void (async () => {
       const { data } = await supabase
-        .from('farms')
-        .select('id, name, shipping_pause_start, shipping_pause_end, shipping_pause_reason')
-        .in('id', farmIds)
+        .from('shipping_pauses')
+        .select('id, farm_id, start_date, end_date, reason')
+        .in('farm_id', farmIds)
+        .gte('end_date', new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }))
       if (!alive) return
-      const paused = (data ?? []).filter((row: any) => row.shipping_pause_start && row.shipping_pause_end)
-      if (paused.length === 0) {
+      const rows = (data ?? []) as any[]
+      if (rows.length === 0) {
         setPause(null)
         return
       }
-      // 여러 농가가 같은 기간으로 걸려 있는 것이 보통이라 첫 건을 대표로 쓴다.
-      const head: any = paused[0]
+      // 이 패널이 건 것만 대표로 보여준다. 같은 기간으로 여러 농가에 건 경우가
+      // 보통이라 첫 건의 기간을 쓴다. 다른 쪽(관리자/농가)이 건 구간은 여기서
+      // 지우지 않는다 — 합산해서 적용되는 게 요구사항이다.
+      const head = rows[0]
+      const nameOf = new Map(farms.map((farm) => [farm.id, farm.name]))
       setPause({
-        farmIds: paused.map((row: any) => row.id),
-        farmNames: paused.map((row: any) => row.name),
-        start: head.shipping_pause_start,
-        end: head.shipping_pause_end,
-        reason: head.shipping_pause_reason ?? '',
+        farmIds: rows.map((row) => row.farm_id),
+        farmNames: rows.map((row) => nameOf.get(row.farm_id) ?? '').filter(Boolean),
+        start: head.start_date,
+        end: head.end_date,
+        reason: head.reason ?? '',
       })
     })()
     return () => {
@@ -127,12 +131,11 @@ export function ShippingPausePanel({
     }
     setSaving(true)
     setError('')
-    // 대상이 바뀔 수 있으므로 이 패널이 다루는 농가 전체를 먼저 지우고 다시 건다.
+    // 이 패널이 다루는 농가의 (아직 안 끝난) 구간만 지우고 다시 건다.
+    // 지난 구간은 기록으로 남기고, 다른 쪽에서 건 구간도 건드리지 않는다.
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
     const clear = await supabase
-      .from('farms')
-      .update({ shipping_pause_start: null, shipping_pause_end: null, shipping_pause_reason: null })
-      .in('id', farmIds)
-      .select('id')
+      .from('shipping_pauses').delete().in('farm_id', farmIds).gte('end_date', today)
     let failed = clear.error?.message ?? ''
     if (!failed && next) {
       const targets = next.farmIds.length > 0 ? next.farmIds : farmIds
@@ -140,23 +143,26 @@ export function ShippingPausePanel({
         failed = '정지할 농가를 선택해 주세요.'
       } else {
         const applied = await supabase
-          .from('farms')
-          .update({
-            shipping_pause_start: next.start,
-            shipping_pause_end: next.end,
-            shipping_pause_reason: next.reason || null,
-          })
-          .in('id', targets)
-          .select('id, name, shipping_pause_start, shipping_pause_end, shipping_pause_reason')
+          .from('shipping_pauses')
+          .insert(targets.map((farmId) => ({
+            farm_id: farmId,
+            start_date: next!.start,
+            end_date: next!.end,
+            reason: next!.reason || null,
+          })))
+          .select('farm_id')
         failed = applied.error?.message ?? ''
         // RLS 에 막히면 error 없이 빈 배열이 돌아온다. 화면만 바뀌고 DB 는 그대로인 상태.
         if (!failed && (!applied.data || applied.data.length === 0)) {
           failed = '배송 정지를 저장하지 못했습니다. 권한을 확인해 주세요.'
         } else if (!failed && applied.data) {
+          const nameOf = new Map(farms.map((farm) => [farm.id, farm.name]))
           next = {
             ...next,
-            farmIds: applied.data.map((row: { id: string }) => row.id),
-            farmNames: applied.data.map((row: { name: string }) => row.name),
+            farmIds: applied.data.map((row: { farm_id: string }) => row.farm_id),
+            farmNames: applied.data
+              .map((row: { farm_id: string }) => nameOf.get(row.farm_id) ?? '')
+              .filter(Boolean),
           }
         }
       }
@@ -281,6 +287,26 @@ function ShippingPauseDialog({
       window.removeEventListener('keydown', onKey)
     }
   }, [open, initial, today, farmSelect, onClose])
+
+  // 공휴일은 달력에 빨갛게 표시한다. 정지 기간을 고를 때 연휴가 어디인지
+  // 눈으로 보여야 하기 때문이다. 이름은 title 로 붙인다.
+  const [holidays, setHolidays] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (!open) return
+    let alive = true
+    void (async () => {
+      const from = ymd(year, month, 1)
+      const to = ymd(year, month, daysInMonth(year, month))
+      const { data } = await supabase
+        .from('holidays').select('holiday_date, name')
+        .gte('holiday_date', from).lte('holiday_date', to)
+      if (!alive) return
+      const map: Record<string, string> = {}
+      for (const row of (data ?? []) as any[]) map[row.holiday_date] = row.name
+      setHolidays(map)
+    })()
+    return () => { alive = false }
+  }, [open, year, month])
 
   const cells = useMemo(() => {
     const firstWeekday = new Date(year, month - 1, 1).getDay()
@@ -434,7 +460,7 @@ function ShippingPauseDialog({
             </div>
             <div className="grid grid-cols-7 text-center text-xs text-muted">
               {WEEKDAYS.map((label) => (
-                <div key={label} className="py-1">
+                <div key={label} className={`py-1 ${label === '일' ? 'text-red-500' : ''}`}>
                   {label}
                 </div>
               ))}
@@ -448,6 +474,13 @@ function ShippingPauseDialog({
                 const inMiddle = Boolean(start && rangeEnd && day > start && day < rangeEnd)
                 const isSingle = Boolean(start && rangeEnd && start === rangeEnd && day === start)
                 const isToday = day === today
+                // 공휴일과 일요일은 우체국이 쉬는 날이라 빨갛게 보여준다.
+                const holidayName = holidays[day]
+                const isSunday = new Date(
+                  Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8)),
+                ).getDay() === 0
+                const restDay = Boolean(holidayName) || isSunday
+                const selected = isStart || isEnd || isSingle
                 return (
                   <div
                     key={day}
@@ -459,10 +492,13 @@ function ShippingPauseDialog({
                       type="button"
                       disabled={disabled}
                       onClick={() => pickDay(day)}
+                      title={holidayName ?? undefined}
                       className={`flex h-10 w-full items-center justify-center text-sm ${
-                        disabled ? 'text-gray-300' : 'text-gray-800'
-                      } ${isStart || isEnd || isSingle ? 'rounded-full bg-primary font-semibold text-white' : ''} ${
-                        isToday && !isStart && !isEnd && !isSingle ? 'font-semibold text-primary' : ''
+                        disabled
+                          ? restDay ? 'text-red-200' : 'text-gray-300'
+                          : restDay ? 'text-red-600' : 'text-gray-800'
+                      } ${selected ? 'rounded-full bg-primary font-semibold text-white' : ''} ${
+                        isToday && !selected ? 'font-semibold text-primary' : ''
                       }`}
                     >
                       {Number(day.slice(8))}
