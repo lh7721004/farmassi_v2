@@ -16,6 +16,7 @@ async def create_order(ctx: FnCtx) -> FnResult:
         return fail("로그인이 필요합니다.", 401)
     body = ctx.body
     recipient = body.get("recipient") or {}
+    sender = body.get("sender") or {}
     if not (body.get("farmId") and body.get("items") and recipient.get("name")
             and recipient.get("phone") and recipient.get("address")):
         return fail("주문 정보가 올바르지 않습니다.")
@@ -62,6 +63,12 @@ async def create_order(ctx: FnCtx) -> FnResult:
         "address": recipient["address"],
         "address_detail": recipient.get("addressDetail"),
         "request_memo": body.get("requestMemo"),
+        # 손님이 적은 입금자명. 없으면 수령인 이름으로 둔다 — 자동 대사가
+        # 후보를 넓게 잡을 수 있게 하려는 것이다.
+        "depositor_name": (sender.get("depositorName") or "").strip() or recipient["name"],
+        "sender_name": (sender.get("name") or "").strip() or None,
+        "sender_phone": (sender.get("phone") or "").strip() or None,
+        "sender_address": (sender.get("address") or "").strip() or None,
         "total_amount": total,
         "deposit_due_amount": total,
         "deposit_code": deposit_code,

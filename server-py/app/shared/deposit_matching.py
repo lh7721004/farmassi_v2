@@ -48,10 +48,13 @@ def match_deposit(
         return MatchResult(same_amount[0]["id"], "amount_unique", candidate_ids)
 
     # 금액이 같은 주문이 여럿이면 이름으로 좁힌다.
+    # 손님이 직접 적은 입금자명을 먼저 본다 — 수령인과 입금자가 다른 경우
+    # ("김철수로 주문하고 고길동이 입금") 를 잡기 위한 것이다.
     if depositor:
-        by_name = [o for o in same_amount
-                   if o["recipient_name"] and _normalize(o["recipient_name"]) == depositor]
-        if len(by_name) == 1:
-            return MatchResult(by_name[0]["id"], "recipient_name", candidate_ids)
+        for field in ("depositor_name", "recipient_name"):
+            by_name = [o for o in same_amount
+                       if o.get(field) and _normalize(o[field]) == depositor]
+            if len(by_name) == 1:
+                return MatchResult(by_name[0]["id"], "recipient_name", candidate_ids)
 
     return MatchResult(None, "ambiguous", candidate_ids)
