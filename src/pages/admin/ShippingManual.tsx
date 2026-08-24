@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronDown, Trash2 } from 'lucide-react'
+import { ChevronDown, Sparkles, Trash2 } from 'lucide-react'
 import { AppShell } from '../../components/layout/AppShell'
 import { Header } from '../../components/layout/Header'
 import { AddressPicker, type AddressValue } from '../../components/shared/AddressPicker'
@@ -216,7 +216,7 @@ function applyProduct(product: DummyProduct): Partial<ManualParcelRow> {
   }
 }
 
-function ExcelLabel({ label, required }: { label: string; required: boolean }) {
+function ExcelLabel({ label, required, ai }: { label: string; required: boolean; ai?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted">
       <span
@@ -226,7 +226,10 @@ function ExcelLabel({ label, required }: { label: string; required: boolean }) {
         ].join(' ')}
         aria-hidden
       />
-      <span className="text-gray-700">{label}</span>
+      <span className="inline-flex items-center gap-1 text-gray-700">
+        {label}
+        {ai ? <Sparkles className="h-3.5 w-3.5 text-violet-500" aria-hidden /> : null}
+      </span>
       {required ? <span className="text-[10px] font-semibold text-red-500">필수</span> : null}
     </span>
   )
@@ -239,15 +242,17 @@ function tint(required: boolean) {
 function ExcelField({
   label,
   required,
+  ai,
   children,
 }: {
   label: string
   required: boolean
+  ai?: boolean
   children: ReactNode
 }) {
   return (
     <label className="block">
-      <ExcelLabel label={label} required={required} />
+      <ExcelLabel label={label} required={required} ai={ai} />
       {children}
     </label>
   )
@@ -295,6 +300,7 @@ export function AdminShippingManual() {
   const [entries, setEntries] = useState<ManualParcelRow[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [pendingLoadId, setPendingLoadId] = useState<string | null>(null)
+  const [bulkPaste, setBulkPaste] = useState('')
   const [mobilePaste, setMobilePaste] = useState('')
 
   const splitOn = draft.split === 'Y'
@@ -304,6 +310,11 @@ export function AdminShippingManual() {
 
   function patchDraft(patch: Partial<ManualParcelRow>) {
     setDraft((prev) => ({ ...prev, ...patch }))
+  }
+
+  function applyBulkPaste(raw: string) {
+    setBulkPaste(raw)
+    // TODO: parse and auto-fill recipient, address, phone, product, etc.
   }
 
   function applyMobilePaste(raw: string) {
@@ -435,6 +446,22 @@ export function AdminShippingManual() {
               onChange={(orderChannel) => patchDraft({ orderChannel })}
             />
           </div>
+
+          <ExcelField label="전체 붙여넣기" required={false} ai>
+            <textarea
+              className={`${inputClass} min-h-16 resize-y ${tint(false)}`}
+              value={bulkPaste}
+              onChange={(e) => applyBulkPaste(e.target.value)}
+              onPaste={(e) => {
+                const text = e.clipboardData.getData('text')
+                if (!text.trim()) return
+                e.preventDefault()
+                applyBulkPaste(text)
+              }}
+              placeholder="주문 정보 붙여넣기 (이름, 주소, 연락처 등)"
+              aria-label="전체 붙여넣기"
+            />
+          </ExcelField>
 
           <ExcelField label="받는 분" required>
             <input
