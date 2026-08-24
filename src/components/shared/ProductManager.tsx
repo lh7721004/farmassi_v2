@@ -14,6 +14,7 @@ import {
 } from '../../lib/kpostParcelExcel'
 import { PriceTag, discountRate } from './PriceTag'
 import { deletePublicImage, preparePublicImage, uploadFarmImage } from '../../lib/storageImages'
+import { PRODUCT_IMAGE_ASPECT } from '../../lib/imageCrop'
 import { supabase } from '../../lib/supabase'
 import {
   PRODUCT_SALE_STATUS_LABEL,
@@ -25,6 +26,7 @@ import {
 } from '../../types/models'
 import { ProductCard } from './ProductCard'
 import { ProductImportDialog } from './ProductImportDialog'
+import { ImageCropDialog } from './ImageCropDialog'
 
 function ImageFileInput({ onPick }: { onPick: (file: File) => void }) {
   return (
@@ -240,7 +242,7 @@ function ProductFormCard({
         <span className="text-xs font-medium text-muted">이미지</span>
         {imagePreview ? (
           <div className="relative mt-1 overflow-hidden rounded-xl border border-gray-200">
-            <img src={imagePreview} alt="" className="h-40 w-full object-cover" />
+            <img src={imagePreview} alt="" className="aspect-[16/9] w-full object-cover" />
             <div className="absolute right-2 top-2 flex gap-1">
               <span className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-white/95 px-3 text-xs font-medium text-gray-700 shadow-sm">
                 변경
@@ -256,10 +258,10 @@ function ProductFormCard({
             </div>
           </div>
         ) : (
-          <div className="relative mt-1 flex h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 text-sm text-muted">
+          <div className="relative mt-1 flex aspect-[16/9] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 text-sm text-muted">
             <ImagePlus className="h-6 w-6" />
             앨범 또는 카메라에서 선택
-            <span className="text-xs">최대 5MB · 큰 사진은 자동으로 줄입니다</span>
+            <span className="text-xs">매장 카드와 같은 비율(16:9)로 자릅니다 · 최대 5MB</span>
             <ImageFileInput onPick={onPickImage} />
           </div>
         )}
@@ -455,6 +457,7 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
   const [farmLimitMessage, setFarmLimitMessage] = useState('')
   const [farmLimitError, setFarmLimitError] = useState('')
   const [farmLimitSaving, setFarmLimitSaving] = useState(false)
+  const [cropFile, setCropFile] = useState<File | null>(null)
   const productsRef = useRef(products)
   const dragIdRef = useRef<string | null>(null)
   productsRef.current = products
@@ -550,16 +553,20 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
   }
 
   function pickImage(file: File) {
-    void (async () => {
-      const prepared = await preparePublicImage(file)
-      if (typeof prepared === 'string') {
-        setError(prepared)
-        return
-      }
-      setError('')
-      setImageFile(prepared)
-      setImageRemoved(false)
-    })()
+    setError('')
+    setCropFile(file)
+  }
+
+  async function applyCroppedImage(cropped: File) {
+    setCropFile(null)
+    const prepared = await preparePublicImage(cropped)
+    if (typeof prepared === 'string') {
+      setError(prepared)
+      return
+    }
+    setError('')
+    setImageFile(prepared)
+    setImageRemoved(false)
   }
 
   function clearImage() {
@@ -674,6 +681,18 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
       onCancel={closeForm}
     />
   ) : null
+
+  const cropDialog = (
+    <ImageCropDialog
+      open={Boolean(cropFile)}
+      file={cropFile}
+      aspect={PRODUCT_IMAGE_ASPECT}
+      title="상품 사진 자르기"
+      hint="매장·상품 카드에 보이는 16:9 비율로 맞춰 자른 뒤 확인하세요."
+      onCancel={() => setCropFile(null)}
+      onConfirm={(next) => void applyCroppedImage(next)}
+    />
+  )
 
   if (isFarm) {
     return (
@@ -795,6 +814,7 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
           nextSortOrder={products.reduce((max, product) => Math.max(max, product.sort_order), -1) + 1}
           onImported={() => void load()}
         />
+        {cropDialog}
       </div>
     )
   }
@@ -838,6 +858,7 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
           </div>
         </Card>
       ))}
+      {cropDialog}
     </div>
   )
 }
