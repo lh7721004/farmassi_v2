@@ -5,7 +5,7 @@ import { NotificationBell } from '../../components/notifications/NotificationBel
 import { OrderItem } from '../../components/shared/OrderItem'
 import { ShippingPausePanel } from '../../components/shared/ShippingPausePanel'
 import { useFarmWorkspace } from '../../lib/farmWorkspace'
-import { toOrderListModel, type OrderRow } from '../../lib/orders'
+import { sortShipmentOrders, toOrderListModel, type OrderRow } from '../../lib/orders'
 import { supabase } from '../../lib/supabase'
 
 export function FarmDelivery() {
@@ -19,7 +19,7 @@ export function FarmDelivery() {
       .eq('farm_id', farm.id)
       .in('status', ['paid', 'packing'])
       .order('created_at', { ascending: false })
-      .then(({ data }) => setOrders((data as OrderRow[]) ?? []))
+      .then(({ data }) => setOrders(sortShipmentOrders((data as OrderRow[]) ?? [])))
   }, [farm.id])
 
   return (
