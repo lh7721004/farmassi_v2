@@ -60,6 +60,34 @@ export function Checkout() {
   })
   const [sameAsDepositorUi, setSameAsDepositorUi] = useState(false)
   const [senderOpenUi, setSenderOpenUi] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
+
+  const profileDiffers = useMemo(() => {
+    if (!profile) return false
+    const pName = profile.display_name?.trim() ?? ''
+    const pPhone = profile.phone?.trim() ?? ''
+    const curName = senderUi.depositorName.trim()
+    const curPhone = senderUi.phone.trim()
+    if (!curName && !curPhone) return false
+    return curName !== pName || curPhone !== pPhone
+  }, [profile, senderUi.depositorName, senderUi.phone])
+
+  async function saveProfileAsDefault() {
+    if (!user || savingProfile) return
+    setSavingProfile(true)
+    try {
+      await supabase
+        .from('profiles')
+        .update({
+          display_name: senderUi.depositorName.trim(),
+          phone: senderUi.phone.trim(),
+        })
+        .eq('id', user.id)
+      await refresh()
+    } finally {
+      setSavingProfile(false)
+    }
+  }
 
   const cart = getCart(farmSlug)
   const qtyById = useMemo(
@@ -112,6 +140,28 @@ export function Checkout() {
       address_detail: addr.address_detail ?? '',
     }))
   }
+
+  useEffect(() => {
+    if (!profile) return
+    const profileName = profile.display_name?.trim() ?? ''
+    const profilePhone = profile.phone?.trim() ?? ''
+
+    if (profileName || profilePhone) {
+      setForm((prev) => ({
+        ...prev,
+        recipient_name: prev.recipient_name.trim() ? prev.recipient_name : profileName,
+        phone: prev.phone.trim() ? prev.phone : profilePhone,
+      }))
+    }
+
+    setSenderUi((prev) => ({
+      ...prev,
+      depositorName: prev.depositorName.trim() ? prev.depositorName : profileName,
+      phone: prev.phone.trim() ? prev.phone : profilePhone,
+      name: prev.name.trim() ? prev.name : profileName,
+      senderPhone: prev.senderPhone.trim() ? prev.senderPhone : profilePhone,
+    }))
+  }, [profile])
 
   const lines = products
     .filter((product) => isProductOrderable(product) && (qtyById[product.id] ?? 0) > 0)
@@ -220,7 +270,19 @@ export function Checkout() {
         </Card>
 
         <Card className="space-y-3">
-          <h3 className="font-semibold">입금자</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">입금자</h3>
+            {profileDiffers && (
+              <button
+                type="button"
+                disabled={savingProfile}
+                onClick={saveProfileAsDefault}
+                className="rounded-lg border border-primary px-2.5 py-1 text-xs font-medium text-primary disabled:opacity-50"
+              >
+                {savingProfile ? '저장 중…' : '기본으로 저장'}
+              </button>
+            )}
+          </div>
           <p className="text-xs text-muted">입금 확인에 사용됩니다. 입금자명과 입금자 연락처는 필수입니다.</p>
           <Input
             form=""
