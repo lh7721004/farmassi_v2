@@ -33,17 +33,6 @@ async def create_order(ctx: FnCtx) -> FnResult:
     if not farm["is_active"]:
         return fail("이 농가는 지금 주문을 받지 않습니다.", 409)
 
-    # 배송 일시정지 기간이면 받지 않는다. 화면에서도 버튼을 막지만 서버가
-    # 최종 판단을 해야 한다 — 화면만 막으면 우회할 수 있다.
-    pause_start, pause_end = farm.get("shipping_pause_start"), farm.get("shipping_pause_end")
-    if pause_start and pause_end:
-        today = datetime.now(_KST).strftime("%Y-%m-%d")
-        if pause_start <= today <= pause_end:   # 'YYYY-MM-DD' 는 사전순 비교가 곧 날짜 비교
-            reason = farm.get("shipping_pause_reason")
-            return fail(
-                f"{pause_start} ~ {pause_end} 배송이 멈춥니다."
-                + (f" ({reason})" if reason else ""), 409)
-
     products = (await db.from_("products").select("*")
                 .eq("farm_id", farm["id"]).eq("sale_status", "on_sale")
                 .in_("id", [item["productId"] for item in body["items"]])).data or []

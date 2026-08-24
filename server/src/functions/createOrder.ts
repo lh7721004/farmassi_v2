@@ -21,16 +21,6 @@ export const createOrder: FnHandler = async ({ userId, body, admin }) => {
   // "찾을 수 없다" 고 하면 사용자가 주소를 잘못 눌렀다고 오해한다.
   if (!farm.is_active) return fail('이 농가는 지금 주문을 받지 않습니다.', 409)
 
-  // 배송 일시정지 기간이면 받지 않는다. 화면에서도 버튼을 막지만 서버가
-  // 최종 판단을 해야 한다 — 화면만 막으면 우회할 수 있다.
-  if (farm.shipping_pause_start && farm.shipping_pause_end) {
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
-    if (farm.shipping_pause_start <= today && today <= farm.shipping_pause_end) {
-      const reason = farm.shipping_pause_reason ? ` (${farm.shipping_pause_reason})` : ''
-      return fail(`${farm.shipping_pause_start} ~ ${farm.shipping_pause_end} 배송이 멈춥니다.${reason}`, 409)
-    }
-  }
-
   const { data: products } = await db.from('products').select('*')
     .eq('farm_id', farm.id).eq('sale_status', 'on_sale')
     .in('id', body.items.map((item: any) => item.productId))
