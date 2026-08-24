@@ -18,7 +18,6 @@ import {
   QTY_VOLUME_WARNING,
   type TodayQty,
 } from '../../lib/qtyLimits'
-import { activeShippingPause } from '../../lib/shippingPause'
 import { useAuth } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 import { isProductOrderable, type Farm, type Product } from '../../types/models'
@@ -63,9 +62,9 @@ export function FarmStore() {
     void load()
   }, [farmSlug])
 
-  // 농가가 비활성이거나 배송 정지 중이면 담기·주문을 막는다. 구경과 문의는 그대로 가능하다.
-  const pause = activeShippingPause(farm)
-  const orderingClosed = Boolean(farm && (!farm.is_active || pause))
+  // 비활성 농가만 담기·주문을 막는다. 배송 일시정지 중에도 주문은 받는다 —
+  // 예상 배송일이 정지 이후로 미뤄져 표시될 뿐이다.
+  const orderingClosed = Boolean(farm && !farm.is_active)
 
   const qtyById = useMemo(() => Object.fromEntries(cart.map((item) => [item.productId, item.quantity])), [cart])
   const selected = products.filter((product) => isProductOrderable(product) && (qtyById[product.id] ?? 0) > 0)
@@ -150,7 +149,7 @@ export function FarmStore() {
         ) : null}
         <ShippingScheduleNotice
           days={farm.delivery_days}
-          farm={farm}
+          farmId={farm.id}
           volumeWarning={volumeWarning}
           volumeWarningMessage={QTY_VOLUME_WARNING}
         />
@@ -171,13 +170,9 @@ export function FarmStore() {
       </div>
       {orderingClosed && (
         <div className="mx-4 mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm font-semibold text-amber-900">
-            {pause ? '배송 일시정지 중입니다' : '지금은 주문을 받지 않습니다'}
-          </p>
+          <p className="text-sm font-semibold text-amber-900">지금은 주문을 받지 않습니다</p>
           <p className="mt-1 text-xs text-amber-800">
-            {pause
-              ? '상품과 농가 정보는 그대로 보실 수 있습니다. 정지 기간이 지나면 다시 주문할 수 있습니다.'
-              : '상품과 농가 정보는 그대로 보실 수 있습니다. 주문은 잠시 멈춰 있습니다.'}
+            상품과 농가 정보는 그대로 보실 수 있습니다. 주문은 잠시 멈춰 있습니다.
           </p>
         </div>
       )}

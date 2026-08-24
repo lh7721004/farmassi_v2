@@ -83,10 +83,6 @@ export interface Farm {
   is_listed: boolean
   /** 배송 가능 요일 (0=일 … 6=토). 빈 배열이면 설정 안 함. */
   delivery_days: number[]
-  /** 배송 일시정지 기간. 둘 다 비어 있으면 정지 없음. */
-  shipping_pause_start: string | null
-  shipping_pause_end: string | null
-  shipping_pause_reason: string | null
   /** 농가 일일 주문 수량 한도. 넘어도 주문은 받고 화면 경고만. */
   daily_qty_limit: number
   created_at: string
@@ -223,4 +219,20 @@ export interface DepositTransaction {
   matched_order_id: string | null
   match_status: MatchStatus
   created_at: string
+}
+
+
+/** 배송 일시정지 구간. 관리자와 농가가 각각 걸 수 있고 겹치면 합산된다. */
+export interface ShippingPause {
+  id: string
+  farm_id: string
+  start_date: string
+  end_date: string
+  reason: string | null
+  created_at: string
+}
+
+export interface Holiday {
+  holiday_date: string
+  name: string
 }

@@ -8,12 +8,14 @@ import { Card } from '../../components/ui/Card'
 import { adminNavItems } from '../../config/adminNav'
 import { groupOrdersByFarm, toOrderListModel, type OrderRow } from '../../lib/orders'
 import { supabase } from '../../lib/supabase'
+import { pauseCovering, pauseMessage, todayInSeoul, type PauseRange } from '../../lib/deliveryEstimate'
 
 const ORDER_SELECT =
   '*, order_items(*, product:products(parcel_weight_kg, parcel_volume_cm, parcel_content_code, parcel_delivery_type)), farms(name, slug)'
 
 export function AdminShipments() {
   const [orders, setOrders] = useState<OrderRow[]>([])
+  const [pauses, setPauses] = useState<Record<string, PauseRange[]>>({})
 
   async function loadOrders() {
     const { data } = await supabase
@@ -23,6 +25,20 @@ export function AdminShipments() {
       .order('created_at', { ascending: false })
     setOrders((data as OrderRow[]) ?? [])
   }
+
+  // 농가별 정지 구간. 관리자와 농가가 각각 걸 수 있어 행이 여러 개다.
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase
+        .from('shipping_pauses').select('farm_id, start_date, end_date, reason')
+        .gte('end_date', todayInSeoul())
+      const byFarm: Record<string, PauseRange[]> = {}
+      for (const row of (data ?? []) as any[]) {
+        (byFarm[row.farm_id] ??= []).push(row)
+      }
+      setPauses(byFarm)
+    })()
+  }, [])
 
   useEffect(() => {
     void loadOrders()
@@ -54,6 +70,12 @@ export function AdminShipments() {
                 orders={group.orders}
                 fileStem={`kpost_${group.slug}`}
                 onUpdated={() => void loadOrders()}
+                pausedReason={(() => {
+                  // 정지 기간에는 송장을 만들지 않는다. 송장 자동화가 없으므로
+                  // 엑셀만 안 뽑으면 그 기간 출고가 멈춘다.
+                  const hit = pauseCovering(pauses[group.farmId] ?? [], todayInSeoul())
+                  return hit ? `${pauseMessage(hit)} · 송장을 만들지 않습니다` : null
+                })()}
               />
             </Card>
             {group.orders.map((order) => (

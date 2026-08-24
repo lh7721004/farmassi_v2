@@ -11,9 +11,11 @@ interface KpostParcelExportProps {
   fileStem?: string
   /** 입금완료 → 송장 발급 완료(packing) 반영 뒤 목록 갱신 */
   onUpdated?: () => void
+  /** 배송 일시정지 중이면 사유. 있으면 내보내기를 막는다. */
+  pausedReason?: string | null
 }
 
-export function KpostParcelExport({ orders, fileStem, onUpdated }: KpostParcelExportProps) {
+export function KpostParcelExport({ orders, fileStem, onUpdated, pausedReason }: KpostParcelExportProps) {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
@@ -21,6 +23,9 @@ export function KpostParcelExport({ orders, fileStem, onUpdated }: KpostParcelEx
 
   return (
     <div className="space-y-2">
+      {pausedReason && (
+        <p className="text-xs text-amber-700">{pausedReason}</p>
+      )}
       {missingZip.length > 0 && (
         <p className="text-xs text-amber-700">
           우편번호가 없는 주문이 {missingZip.length}건 있습니다. 우체국 주소검증에서 실패할 수 있습니다.
@@ -29,7 +34,7 @@ export function KpostParcelExport({ orders, fileStem, onUpdated }: KpostParcelEx
       <ErrorText>{error}</ErrorText>
       {message && <p className="text-sm text-primary">{message}</p>}
       <Button
-        disabled={orders.length === 0 || busy}
+        disabled={orders.length === 0 || busy || Boolean(pausedReason)}
         onClick={async () => {
           setError('')
           setMessage('')
