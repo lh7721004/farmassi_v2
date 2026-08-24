@@ -199,7 +199,15 @@ export function ProductImportDialog({
                 const farmName = product.farms?.name ?? '농가'
                 return (
                   <li key={product.id} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-2.5">
-                    <div className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br ${productGradient(product.id)}`} />
+                    <div className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br ${productGradient(product.id)}`}>
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : null}
+                    </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-gray-900">{product.name}</p>
                       <p className="truncate text-xs text-muted">
