@@ -11,6 +11,8 @@ export interface CandidateOrder {
   deposit_due_amount: number
   deposit_code: string | null
   recipient_name: string | null
+  /** 손님이 직접 적은 입금자명. 수령인과 다를 수 있어 먼저 본다. */
+  depositor_name?: string | null
 }
 
 export type MatchReason =
@@ -59,12 +61,15 @@ export function matchDeposit(
   }
 
   // 금액이 같은 주문이 여럿이면 이름으로 좁힌다.
+  // 손님이 직접 적은 입금자명을 먼저 본다 — 수령인과 입금자가 다른 경우를 잡는다.
   if (depositor) {
-    const byName = sameAmount.filter(
-      (order) => order.recipient_name && normalize(order.recipient_name) === depositor,
-    )
-    if (byName.length === 1) {
-      return { orderId: byName[0].id, reason: 'recipient_name', candidateIds }
+    for (const field of ['depositor_name', 'recipient_name'] as const) {
+      const byName = sameAmount.filter(
+        (order) => order[field] && normalize(order[field]) === depositor,
+      )
+      if (byName.length === 1) {
+        return { orderId: byName[0].id, reason: 'recipient_name', candidateIds }
+      }
     }
   }
 

@@ -10,6 +10,7 @@ import { Card } from '../../components/ui/Card'
 import { PageSpinner } from '../../components/ui/Feedback'
 import { getCart, setCart, type CartItem } from '../../lib/cart'
 import { formatPrice, kakaoChannelHref } from '../../lib/format'
+import { activeShippingPause } from '../../lib/shippingPause'
 import { useAuth } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 import { isProductOrderable, type Farm, type Product } from '../../types/models'
@@ -48,8 +49,9 @@ export function FarmStore() {
     void load()
   }, [farmSlug])
 
-  // 농가가 비활성이면 담기·주문을 막는다. 구경과 문의는 그대로 가능하다.
-  const orderingClosed = Boolean(farm && !farm.is_active)
+  // 농가가 비활성이거나 배송 정지 중이면 담기·주문을 막는다. 구경과 문의는 그대로 가능하다.
+  const pause = activeShippingPause(farm)
+  const orderingClosed = Boolean(farm && (!farm.is_active || pause))
 
   const qtyById = useMemo(() => Object.fromEntries(cart.map((item) => [item.productId, item.quantity])), [cart])
   const selected = products.filter((product) => isProductOrderable(product) && (qtyById[product.id] ?? 0) > 0)
@@ -116,7 +118,7 @@ export function FarmStore() {
             <p className="text-sm text-gray-700">{farm.description || farm.product_summary}</p>
           </Card>
         ) : null}
-        <ShippingScheduleNotice />
+        <ShippingScheduleNotice days={farm.delivery_days} farm={farm} />
         {products.length === 0 ? (
           <p className="text-center text-muted py-10">판매 중인 상품이 없습니다</p>
         ) : (
@@ -126,7 +128,7 @@ export function FarmStore() {
                 key={product.id}
                 product={product}
                 quantity={qtyById[product.id] ?? 0}
-                onChangeQuantity={(qty) => updateQty(product.id, qty)}
+                onChangeQuantity={orderingClosed ? undefined : (qty) => updateQty(product.id, qty)}
               />
             ))}
           </div>
@@ -134,9 +136,13 @@ export function FarmStore() {
       </div>
       {orderingClosed && (
         <div className="mx-4 mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm font-semibold text-amber-900">지금은 주문을 받지 않습니다</p>
+          <p className="text-sm font-semibold text-amber-900">
+            {pause ? '배송 일시정지 중입니다' : '지금은 주문을 받지 않습니다'}
+          </p>
           <p className="mt-1 text-xs text-amber-800">
-            상품과 농가 정보는 그대로 보실 수 있습니다. 주문은 잠시 멈춰 있습니다.
+            {pause
+              ? '상품과 농가 정보는 그대로 보실 수 있습니다. 정지 기간이 지나면 다시 주문할 수 있습니다.'
+              : '상품과 농가 정보는 그대로 보실 수 있습니다. 주문은 잠시 멈춰 있습니다.'}
           </p>
         </div>
       )}

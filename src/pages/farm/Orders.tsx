@@ -17,9 +17,9 @@ const filters: { id: FilterStatus; label: string }[] = [
   { id: 'all', label: '전체' },
   { id: 'pending_deposit', label: '입금대기' },
   { id: 'paid', label: '입금완료' },
-  { id: 'packing', label: '포장중' },
+  { id: 'packing', label: '송장 발급 완료' },
   { id: 'shipping', label: '배송중' },
-  { id: 'completed', label: '완료' },
+  { id: 'completed', label: '배송완료' },
 ]
 
 export function FarmOrders() {

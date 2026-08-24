@@ -40,6 +40,10 @@ async def _init(conn: asyncpg.Connection) -> None:
     passthrough = dict(encoder=str, decoder=str, schema="pg_catalog", format="text")
     for name in ("uuid", "int8", "numeric"):
         await conn.set_type_codec(name, **passthrough)
+    # date 는 'YYYY-MM-DD' 문자열로 주고받는다. PostgREST 가 그렇게 냈고
+    # HTML date 입력도 같은 형식이라, 화면에서 변환할 일이 없다.
+    # asyncpg 기본값은 datetime.date 객체라 문자열을 넣으면 오류가 난다.
+    await conn.set_type_codec("date", **passthrough)
     await conn.set_type_codec(
         "timestamptz", encoder=str, decoder=_timestamptz, schema="pg_catalog", format="text"
     )

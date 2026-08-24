@@ -14,9 +14,35 @@ export const KPOST_CONTENT_CODES = [
   '기타',
 ] as const
 
-export const KPOST_WEIGHTS = ['3', '5', '10', '20', '30'] as const
+export const KPOST_WEIGHTS = ['3', '5', '7', '10', '15', '20', '25', '30'] as const
 export const KPOST_VOLUMES = ['80', '100', '120', '160'] as const
 export const KPOST_DELIVERY_TYPES = ['', '대면', '비대면'] as const
+
+const KPOST_WEIGHT_LABEL: Record<string, string> = {
+  '3': '3kg 이하',
+  '5': '3kg ~ 5kg',
+  '7': '5kg ~ 7kg',
+  '10': '7kg ~ 10kg',
+  '15': '10kg ~ 15kg',
+  '20': '15kg ~ 20kg',
+  '25': '20kg ~ 25kg',
+  '30': '25kg ~ 30kg',
+}
+
+const KPOST_VOLUME_LABEL: Record<string, string> = {
+  '80': '80cm 이하',
+  '100': '80cm ~ 100cm',
+  '120': '100cm ~ 120cm',
+  '160': '120cm ~ 160cm',
+}
+
+export function kpostWeightLabel(value: string) {
+  return KPOST_WEIGHT_LABEL[value] ?? `${value}kg`
+}
+
+export function kpostVolumeLabel(value: string) {
+  return KPOST_VOLUME_LABEL[value] ?? `${value}cm`
+}
 
 export interface ParcelExcelOptions {
   weightKg: string

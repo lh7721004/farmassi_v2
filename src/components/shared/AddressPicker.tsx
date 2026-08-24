@@ -25,6 +25,7 @@ interface AddressPickerProps {
   emptyHint?: string
   searchTitle?: string
   detailPlaceholder?: string
+  detailLabel?: string
 }
 
 type OverlayView = 'search' | 'confirm'
@@ -35,6 +36,7 @@ export function AddressPicker({
   emptyHint = '배송지를 현재 위치 또는 검색으로 설정해 주세요',
   searchTitle = '배송지 검색',
   detailPlaceholder = '동·호수, 공동현관 비밀번호 등',
+  detailLabel = '상세주소',
 }: AddressPickerProps) {
   const searchId = useId()
   const [open, setOpen] = useState(false)
@@ -197,7 +199,7 @@ export function AddressPicker({
       </button>
 
       <Input
-        label="상세주소"
+        label={detailLabel}
         value={value.addressDetail}
         onChange={(e) => onChange({ ...value, addressDetail: e.target.value })}
         placeholder={detailPlaceholder}

@@ -3,9 +3,9 @@ import type { OrderStatus } from '../types/models'
 export const statusLabels: Record<OrderStatus, string> = {
   pending_deposit: '입금대기',
   paid: '입금완료',
-  packing: '포장중',
+  packing: '송장 발급 완료',
   shipping: '배송중',
-  completed: '완료',
+  completed: '배송완료',
   cancelled: '취소',
 }
 

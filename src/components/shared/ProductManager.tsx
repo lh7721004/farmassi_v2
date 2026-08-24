@@ -1,4 +1,4 @@
-import { GripVertical, ImagePlus, Plus, X } from 'lucide-react'
+import { GripVertical, ImagePlus, Import, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
@@ -9,6 +9,8 @@ import {
   KPOST_DELIVERY_TYPES,
   KPOST_VOLUMES,
   KPOST_WEIGHTS,
+  kpostVolumeLabel,
+  kpostWeightLabel,
 } from '../../lib/kpostParcelExcel'
 import { PriceTag, discountRate } from './PriceTag'
 import { deletePublicImage, preparePublicImage, uploadFarmImage } from '../../lib/storageImages'
@@ -21,6 +23,7 @@ import {
   type ProductSaleStatus,
 } from '../../types/models'
 import { ProductCard } from './ProductCard'
+import { ProductImportDialog } from './ProductImportDialog'
 
 function ImageFileInput({ onPick }: { onPick: (file: File) => void }) {
   return (
@@ -70,8 +73,12 @@ function normalizeUnit(unit: string | null | undefined, parcelWeight: string) {
   return weight ? unitFromWeight(weight) : raw
 }
 
+function withCurrentOption(options: readonly string[], current: string) {
+  return current && !options.includes(current) ? [current, ...options] : [...options]
+}
+
 function unitSelectOptions(current: string) {
-  return current && !UNIT_OPTIONS.includes(current) ? [current, ...UNIT_OPTIONS] : UNIT_OPTIONS
+  return withCurrentOption(UNIT_OPTIONS, current)
 }
 
 const emptyProductForm: ProductFormValues = {
@@ -239,16 +246,16 @@ function ProductFormCard({
             onChange('unit', unitFromWeight(weight))
           }}
         >
-          {KPOST_WEIGHTS.map((value) => (
+          {withCurrentOption(KPOST_WEIGHTS, form.parcel_weight_kg).map((value) => (
             <option key={value} value={value}>
-              {value}kg
+              {kpostWeightLabel(value)}
             </option>
           ))}
         </Select>
         <Select label="택배 부피(cm)" value={form.parcel_volume_cm} onChange={(e) => onChange('parcel_volume_cm', e.target.value)}>
-          {KPOST_VOLUMES.map((value) => (
+          {withCurrentOption(KPOST_VOLUMES, form.parcel_volume_cm).map((value) => (
             <option key={value} value={value}>
-              {value}cm
+              {kpostVolumeLabel(value)}
             </option>
           ))}
         </Select>
@@ -338,6 +345,7 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imageRemoved, setImageRemoved] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const productsRef = useRef(products)
   const dragIdRef = useRef<string | null>(null)
   productsRef.current = products
@@ -535,10 +543,16 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <Button onClick={toggleAdd} disabled={reordering}>
-            <Plus className="h-4 w-4" />
-            새 상품 추가
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={toggleAdd} disabled={reordering}>
+              <Plus className="h-4 w-4" />
+              새 상품 추가
+            </Button>
+            <Button type="button" variant="outline" disabled={reordering} onClick={() => setImportOpen(true)}>
+              <Import className="h-4 w-4" />
+              불러오기
+            </Button>
+          </div>
           {products.length > 1 && (
             <Button variant={reordering ? 'primary' : 'outline'} onClick={toggleReorder}>
               {reordering ? '완료' : '순서 변경'}
@@ -611,6 +625,13 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
             })}
           </div>
         )}
+        <ProductImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          targetFarmId={farmId}
+          nextSortOrder={products.reduce((max, product) => Math.max(max, product.sort_order), -1) + 1}
+          onImported={() => void load()}
+        />
       </div>
     )
   }
@@ -628,7 +649,7 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
               <PriceTag price={product.price} listPrice={product.list_price} />
             </p>
             <p className="text-xs text-muted">
-              {PRODUCT_SALE_STATUS_LABEL[productSaleStatus(product)]} · 택배 {product.parcel_weight_kg}kg · {product.parcel_volume_cm}cm
+              {PRODUCT_SALE_STATUS_LABEL[productSaleStatus(product)]} · 택배 {kpostWeightLabel(product.parcel_weight_kg)} · {kpostVolumeLabel(product.parcel_volume_cm)}
               · {product.parcel_content_code}
               {product.parcel_delivery_type ? ` · ${product.parcel_delivery_type}` : ''}
             </p>

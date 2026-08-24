@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { DeliveryEstimate } from '../../components/shared/DeliveryEstimate'
+import { ChevronDown, LocateFixed, MapPin, Search } from 'lucide-react'
+import { ShippingScheduleNotice } from '../../components/shared/ShippingScheduleNotice'
+import { activeShippingPause, shippingPauseMessage } from '../../lib/shippingPause'
 import { Header } from '../../components/layout/Header'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -40,6 +42,15 @@ export function Checkout() {
     address_detail: '',
     request_memo: '',
   })
+  const [senderUi, setSenderUi] = useState({
+    depositorName: '',
+    phone: '',
+    name: '',
+    senderPhone: '',
+    addressDetail: '',
+  })
+  const [sameAsDepositorUi, setSameAsDepositorUi] = useState(false)
+  const [senderOpenUi, setSenderOpenUi] = useState(false)
 
   const cart = getCart(farmSlug)
   const qtyById = useMemo(
@@ -95,6 +106,7 @@ export function Checkout() {
       product,
       quantity: qtyById[product.id] ?? 0,
     }))
+  const pause = activeShippingPause(farm)
   const total = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0)
 
   if (loading) return <PageSpinner />
@@ -132,6 +144,12 @@ export function Checkout() {
           try {
             const result = await invokeFunction<CheckoutResult>('create-order', {
               farmId: farm.id,
+              sender: {
+                depositorName: senderUi.depositorName,
+                name: senderUi.name,
+                phone: senderUi.phone,
+                address: senderUi.addressDetail,
+              },
               items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
               recipient: {
                 name: form.recipient_name,
@@ -168,6 +186,93 @@ export function Checkout() {
             <span>합계</span>
             <span className="text-primary">{formatPrice(total)}</span>
           </div>
+        </Card>
+
+        <Card className="space-y-3">
+          <h3 className="font-semibold">입금자</h3>
+          <p className="text-xs text-muted">입금 확인에 사용됩니다. 입금자명과 입금자 연락처는 필수입니다.</p>
+          <Input
+            form=""
+            label="입금자명"
+            placeholder="통장에 표시될 이름"
+            autoComplete="off"
+            value={senderUi.depositorName}
+            onChange={(e) => setSenderUi((p) => ({ ...p, depositorName: e.target.value }))}
+          />
+          <PhoneField
+            label="입금자 연락처"
+            value={senderUi.phone}
+            onChange={(phone) => setSenderUi((p) => ({ ...p, phone }))}
+          />
+        </Card>
+
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setSenderOpenUi((v) => !v)}
+              aria-expanded={senderOpenUi}
+              className="flex min-w-0 flex-1 items-center gap-1 text-left"
+            >
+              <h3 className="font-semibold">보내는 분 (선택)</h3>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-muted transition-transform ${senderOpenUi ? 'rotate-180' : ''}`}
+              />
+            </button>
+            <button
+              type="button"
+              onClick={() => setSameAsDepositorUi((v) => !v)}
+              className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium ${
+                sameAsDepositorUi ? 'border-primary bg-primary-light text-primary' : 'border-gray-200 text-muted'
+              }`}
+            >
+              입금자와 동일
+            </button>
+          </div>
+          {senderOpenUi && (
+            <>
+              <Input
+                form=""
+                label="보내는 분 (선택)"
+                placeholder="보내는 분 이름"
+                autoComplete="off"
+                value={senderUi.name}
+                onChange={(e) => setSenderUi((p) => ({ ...p, name: e.target.value }))}
+              />
+              <PhoneField
+                label="연락처 (선택)"
+                value={senderUi.senderPhone}
+                onChange={(senderPhone) => setSenderUi((p) => ({ ...p, senderPhone }))}
+              />
+              <div className="space-y-3">
+                <p className="text-xs font-medium text-muted">주소 (선택)</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant="secondary">
+                    <LocateFixed className="h-4 w-4" />
+                    현재 위치
+                  </Button>
+                  <Button type="button" variant="outline">
+                    <Search className="h-4 w-4" />
+                    주소 검색
+                  </Button>
+                </div>
+                <div className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left">
+                  <p className="flex items-center gap-2 text-sm text-muted">
+                    <MapPin className="h-4 w-4 shrink-0" />
+                    보내는 분 주소를 현재 위치 또는 검색으로 설정해 주세요
+                  </p>
+                </div>
+                <Input
+                  form=""
+                  label="상세주소 (선택)"
+                  placeholder="동·호수 등"
+                  autoComplete="off"
+                  value={senderUi.addressDetail}
+                  onChange={(e) => setSenderUi((p) => ({ ...p, addressDetail: e.target.value }))}
+                />
+              </div>
+            </>
+          )}
         </Card>
 
         <Card className="space-y-3">
@@ -229,6 +334,7 @@ export function Checkout() {
               address: form.address,
               addressDetail: form.address_detail,
             }}
+            detailLabel="상세주소 (선택)"
             onChange={(next) => {
               if (next.address !== form.address || next.zonecode !== form.zonecode) {
                 setSelectedAddressId('new')
@@ -242,7 +348,7 @@ export function Checkout() {
             }}
           />
           <RequestMemoField
-            label="요청사항"
+            label="요청사항 (선택)"
             value={form.request_memo}
             onChange={(request_memo) => setForm((p) => ({ ...p, request_memo }))}
           />
@@ -259,7 +365,13 @@ export function Checkout() {
           )}
         </Card>
 
-        <DeliveryEstimate days={farm.delivery_days} />
+        {pause ? (
+          <Card className="border-amber-200 bg-amber-50">
+            <p className="text-sm text-amber-900">{shippingPauseMessage(pause)}</p>
+          </Card>
+        ) : (
+          <ShippingScheduleNotice days={farm.delivery_days} farm={farm} />
+        )}
 
         <Card className="bg-primary-light border-primary/20">
           <p className="text-sm text-gray-800">
@@ -268,8 +380,12 @@ export function Checkout() {
         </Card>
 
         <ErrorText>{error}</ErrorText>
-        <Button type="submit" fullWidth size="lg" disabled={pending || !farm?.is_active}>
-          {!farm?.is_active ? '지금은 주문을 받지 않습니다' : `${formatPrice(total)} 주문하기`}
+        <Button type="submit" fullWidth size="lg" disabled={pending || !farm?.is_active || Boolean(pause)}>
+          {!farm?.is_active
+            ? '지금은 주문을 받지 않습니다'
+            : pause
+              ? '배송 일시정지 중입니다'
+              : `${formatPrice(total)} 주문하기`}
         </Button>
       </form>
     </div>

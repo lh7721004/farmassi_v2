@@ -78,7 +78,7 @@ async def scrape_deposits(ctx: FnCtx) -> FnResult:
         candidates = []
         if farm_id:
             candidates = (await db.from_("orders")
-                          .select("id, deposit_due_amount, deposit_code, recipient_name")
+                          .select("id, deposit_due_amount, deposit_code, recipient_name, depositor_name")
                           .eq("farm_id", farm_id).eq("status", "pending_deposit")).data or []
 
         match = match_deposit(amount, depositor_name, candidates)
@@ -152,7 +152,7 @@ async def _rematch_unmatched(db: Sb, admin) -> int:
             continue
 
         orders = (await db.from_("orders")
-                  .select("id, deposit_due_amount, deposit_code, recipient_name")
+                  .select("id, deposit_due_amount, deposit_code, recipient_name, depositor_name")
                   .eq("farm_id", deposit["farm_id"]).eq("status", "pending_deposit")).data or []
 
         match = match_deposit(deposit["amount"], deposit["depositor_name"], orders)

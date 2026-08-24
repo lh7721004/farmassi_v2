@@ -15,9 +15,19 @@ export function unwrapFarm(farm: OrderRow['farms']): FarmJoin {
   return Array.isArray(farm) ? (farm[0] ?? { name: '농가', slug: 'farm' }) : farm
 }
 
+/** 송장 미발급(paid)을 발급 완료(packing)보다 앞에 둔다. 같은 상태면 최신순. */
+export function sortShipmentOrders<T extends Pick<OrderRow, 'status' | 'created_at'>>(orders: T[]) {
+  const rank = (status: string) => (status === 'paid' ? 0 : status === 'packing' ? 1 : 2)
+  return [...orders].sort((a, b) => {
+    const byStatus = rank(a.status) - rank(b.status)
+    if (byStatus !== 0) return byStatus
+    return b.created_at.localeCompare(a.created_at)
+  })
+}
+
 export function groupOrdersByFarm<T extends OrderRow>(orders: T[]) {
   const map = new Map<string, { farmId: string; name: string; slug: string; orders: T[] }>()
-  for (const order of orders) {
+  for (const order of sortShipmentOrders(orders)) {
     const farm = unwrapFarm(order.farms)
     const current = map.get(order.farm_id) ?? {
       farmId: order.farm_id,
