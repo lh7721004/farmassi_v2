@@ -1,3 +1,4 @@
+import { RotateCcw, RotateCw } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { createPortal } from 'react-dom'
 import ReactCrop, {
@@ -9,7 +10,7 @@ import ReactCrop, {
 import 'react-image-crop/dist/ReactCrop.css'
 import { Button } from '../ui/Button'
 import { ErrorText } from '../ui/Feedback'
-import { cropImageFile } from '../../lib/imageCrop'
+import { cropImageFile, rotateImageSrc } from '../../lib/imageCrop'
 
 interface ImageCropDialogProps {
   open: boolean
@@ -49,43 +50,61 @@ export function ImageCropDialog({
   onConfirm,
 }: ImageCropDialogProps) {
   const imgRef = useRef<HTMLImageElement | null>(null)
+  const objectUrlRef = useRef<string | null>(null)
   const [src, setSrc] = useState<string | null>(null)
   const [crop, setCrop] = useState<Crop>()
   const [completed, setCompleted] = useState<PixelCrop | null>(null)
   const [pending, setPending] = useState(false)
+  const [rotating, setRotating] = useState(false)
   const [error, setError] = useState('')
+
+  const replaceSrc = useCallback((url: string) => {
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    objectUrlRef.current = url
+    setSrc(url)
+    setCrop(undefined)
+    setCompleted(null)
+  }, [])
 
   useEffect(() => {
     if (!open || !file) {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
+      }
       setSrc(null)
       setCrop(undefined)
       setCompleted(null)
       setError('')
       setPending(false)
+      setRotating(false)
       return
     }
-    const url = URL.createObjectURL(file)
-    setSrc(url)
-    setCrop(undefined)
-    setCompleted(null)
+    replaceSrc(URL.createObjectURL(file))
     setError('')
     setPending(false)
-    return () => URL.revokeObjectURL(url)
-  }, [open, file])
+    setRotating(false)
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
+      }
+    }
+  }, [open, file, replaceSrc])
 
   useEffect(() => {
     if (!open) return
     const previous = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !pending) onCancel()
+      if (event.key === 'Escape' && !pending && !rotating) onCancel()
     }
     window.addEventListener('keydown', onKey)
     return () => {
       document.body.style.overflow = previous
       window.removeEventListener('keydown', onKey)
     }
-  }, [open, pending, onCancel])
+  }, [open, pending, rotating, onCancel])
 
   const onImageLoad = useCallback(
     (event: SyntheticEvent<HTMLImageElement>) => {
@@ -96,6 +115,20 @@ export function ImageCropDialog({
     },
     [aspect],
   )
+
+  async function rotate(degrees: 90 | -90) {
+    if (!src || !file || rotating || pending) return
+    setRotating(true)
+    setError('')
+    try {
+      const rotated = await rotateImageSrc(src, degrees, file.name)
+      replaceSrc(URL.createObjectURL(rotated))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '사진을 회전할 수 없습니다.')
+    } finally {
+      setRotating(false)
+    }
+  }
 
   async function confirm() {
     const image = imgRef.current
@@ -116,13 +149,15 @@ export function ImageCropDialog({
 
   if (!open || !file || !src) return null
 
+  const busy = pending || rotating
+
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4">
       <button
         type="button"
         className="absolute inset-0 bg-black/50"
         aria-label="닫기"
-        disabled={pending}
+        disabled={busy}
         onClick={onCancel}
       />
       <div
@@ -147,6 +182,7 @@ export function ImageCropDialog({
             onChange={(next) => setCrop(next)}
             onComplete={(next) => setCompleted(next)}
             className="mx-auto max-h-[55dvh]"
+            disabled={busy}
           >
             <img
               src={src}
@@ -157,13 +193,35 @@ export function ImageCropDialog({
           </ReactCrop>
         </div>
         <div className="shrink-0 space-y-3 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              fullWidth
+              disabled={busy}
+              onClick={() => void rotate(-90)}
+            >
+              <RotateCcw className="h-4 w-4" />
+              왼쪽 회전
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              fullWidth
+              disabled={busy}
+              onClick={() => void rotate(90)}
+            >
+              <RotateCw className="h-4 w-4" />
+              오른쪽 회전
+            </Button>
+          </div>
           <ErrorText>{error}</ErrorText>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" fullWidth disabled={pending} onClick={onCancel}>
+            <Button type="button" variant="ghost" fullWidth disabled={busy} onClick={onCancel}>
               취소
             </Button>
-            <Button type="button" fullWidth disabled={pending} onClick={() => void confirm()}>
-              {pending ? '처리 중...' : '자르고 확인'}
+            <Button type="button" fullWidth disabled={busy} onClick={() => void confirm()}>
+              {pending ? '처리 중...' : rotating ? '회전 중...' : '자르고 확인'}
             </Button>
           </div>
         </div>
