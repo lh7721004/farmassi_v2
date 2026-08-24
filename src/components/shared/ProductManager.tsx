@@ -347,6 +347,83 @@ function SaleStatusSelect({
   )
 }
 
+/** 상품 카드에서 일일·1회 한도를 바로 고친다. */
+function ProductQtyLimitsEditor({
+  product,
+  onSaved,
+}: {
+  product: Product
+  onSaved: () => void
+}) {
+  const [daily, setDaily] = useState(String(product.daily_qty_limit ?? 100))
+  const [perOrder, setPerOrder] = useState(String(product.per_order_qty_limit ?? 100))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setDaily(String(product.daily_qty_limit ?? 100))
+    setPerOrder(String(product.per_order_qty_limit ?? 100))
+    setError('')
+  }, [product.id, product.daily_qty_limit, product.per_order_qty_limit])
+
+  async function save() {
+    const dailyValue = Math.max(1, Number(daily) || 100)
+    const perOrderValue = Math.max(1, Number(perOrder) || 100)
+    if (
+      dailyValue === (product.daily_qty_limit ?? 100) &&
+      perOrderValue === (product.per_order_qty_limit ?? 100)
+    ) {
+      return
+    }
+    setSaving(true)
+    setError('')
+    const { error: updateError } = await supabase
+      .from('products')
+      .update({ daily_qty_limit: dailyValue, per_order_qty_limit: perOrderValue })
+      .eq('id', product.id)
+    setSaving(false)
+    if (updateError) {
+      setError(updateError.message)
+      return
+    }
+    setDaily(String(dailyValue))
+    setPerOrder(String(perOrderValue))
+    onSaved()
+  }
+
+  return (
+    <div className="mt-2 space-y-1.5">
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="text-[11px] font-medium text-muted">일일 한도</span>
+          <input
+            type="number"
+            min={1}
+            className="mt-0.5 w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            value={daily}
+            disabled={saving}
+            onChange={(e) => setDaily(e.target.value)}
+            onBlur={() => void save()}
+          />
+        </label>
+        <label className="block">
+          <span className="text-[11px] font-medium text-muted">1회 한도</span>
+          <input
+            type="number"
+            min={1}
+            className="mt-0.5 w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            value={perOrder}
+            disabled={saving}
+            onChange={(e) => setPerOrder(e.target.value)}
+            onBlur={() => void save()}
+          />
+        </label>
+      </div>
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+    </div>
+  )
+}
+
 function moveItem<T>(list: T[], from: number, to: number) {
   if (from === to || from < 0 || to < 0) return list
   const next = [...list]
@@ -602,10 +679,11 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
     return (
       <div className="space-y-4">
         <Card className="space-y-3">
-          <h3 className="font-semibold">농가 일일 주문 한도</h3>
+          <h3 className="font-semibold">농가 일일 주문 한도 (전체)</h3>
           <p className="text-xs text-muted">
-            오늘 이 농가에 들어온 전체 수량(입금 전 포함, 취소 제외) 기준입니다. 넘어도 주문은
-            받으며 매장에서 경고만 표시합니다.
+            오늘 이 농가에 들어온 <span className="font-medium text-gray-700">전체 수량</span>
+            기준입니다. 상품별 일일·1회 한도는 아래 각 상품 카드에서 따로 조정합니다. 넘어도
+            주문은 받으며 매장에서 경고만 표시합니다.
           </p>
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[8rem] flex-1">
@@ -679,25 +757,28 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
                     product={product}
                     extra={
                       reordering ? undefined : (
-                        <div className="mt-3 flex items-center gap-2">
-                          <SaleStatusSelect
-                            product={product}
-                            onChange={(status) => void setSaleStatus(product.id, status)}
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingId(product.id)
-                              setForm(productToForm(product))
-                              setImageFile(null)
-                              setImageRemoved(false)
-                              setError('')
-                              setFormOpen(true)
-                            }}
-                          >
-                            수정
-                          </Button>
+                        <div className="mt-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <SaleStatusSelect
+                              product={product}
+                              onChange={(status) => void setSaleStatus(product.id, status)}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingId(product.id)
+                                setForm(productToForm(product))
+                                setImageFile(null)
+                                setImageRemoved(false)
+                                setError('')
+                                setFormOpen(true)
+                              }}
+                            >
+                              수정
+                            </Button>
+                          </div>
+                          <ProductQtyLimitsEditor product={product} onSaved={() => void load()} />
                         </div>
                       )
                     }
