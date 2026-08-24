@@ -6,12 +6,6 @@ import { Card } from '../ui/Card'
 import { Textarea } from '../ui/Field'
 import { supabase } from '../../lib/supabase'
 
-export const DUMMY_PAUSE_FARMS = [
-  { id: 'farm-a', name: '하늘농원' },
-  { id: 'farm-b', name: '바람들녘' },
-  { id: 'farm-c', name: '시골농원' },
-] as const
-
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
 export interface ShippingPauseFarm {
@@ -76,7 +70,7 @@ interface ShippingPausePanelProps {
 
 export function ShippingPausePanel({
   farmSelect = false,
-  farms = DUMMY_PAUSE_FARMS.map((farm) => ({ ...farm })),
+  farms = [],
   farmName,
   open: openProp,
   onOpenChange,
@@ -127,7 +121,10 @@ export function ShippingPausePanel({
   }, [farmKey])
 
   async function persist(next: ShippingPause | null) {
-    if (farmIds.length === 0) return
+    if (farmIds.length === 0) {
+      setError('정지할 농가가 없습니다.')
+      return
+    }
     setSaving(true)
     setError('')
     // 대상이 바뀔 수 있으므로 이 패널이 다루는 농가 전체를 먼저 지우고 다시 건다.
@@ -135,17 +132,34 @@ export function ShippingPausePanel({
       .from('farms')
       .update({ shipping_pause_start: null, shipping_pause_end: null, shipping_pause_reason: null })
       .in('id', farmIds)
+      .select('id')
     let failed = clear.error?.message ?? ''
-    if (!failed && next && next.farmIds.length > 0) {
-      const applied = await supabase
-        .from('farms')
-        .update({
-          shipping_pause_start: next.start,
-          shipping_pause_end: next.end,
-          shipping_pause_reason: next.reason || null,
-        })
-        .in('id', next.farmIds)
-      failed = applied.error?.message ?? ''
+    if (!failed && next) {
+      const targets = next.farmIds.length > 0 ? next.farmIds : farmIds
+      if (targets.length === 0) {
+        failed = '정지할 농가를 선택해 주세요.'
+      } else {
+        const applied = await supabase
+          .from('farms')
+          .update({
+            shipping_pause_start: next.start,
+            shipping_pause_end: next.end,
+            shipping_pause_reason: next.reason || null,
+          })
+          .in('id', targets)
+          .select('id, name, shipping_pause_start, shipping_pause_end, shipping_pause_reason')
+        failed = applied.error?.message ?? ''
+        // RLS 에 막히면 error 없이 빈 배열이 돌아온다. 화면만 바뀌고 DB 는 그대로인 상태.
+        if (!failed && (!applied.data || applied.data.length === 0)) {
+          failed = '배송 정지를 저장하지 못했습니다. 권한을 확인해 주세요.'
+        } else if (!failed && applied.data) {
+          next = {
+            ...next,
+            farmIds: applied.data.map((row: { id: string }) => row.id),
+            farmNames: applied.data.map((row: { name: string }) => row.name),
+          }
+        }
+      }
     }
     setSaving(false)
     if (failed) {
@@ -304,10 +318,16 @@ function ShippingPauseDialog({
   function apply() {
     if (!start || !reasonTrimmed) return
     const nextEnd = end ?? start
-    const chosen = farmSelect ? farms.filter((farm) => selectedFarmIds.includes(farm.id)) : []
+    // 농가 배송 페이지(farmSelect=false)는 패널에 넘긴 farms 전체를 대상으로 한다.
+    // 예전에는 빈 배열을 넘겨서 clear 만 하고 다시 걸지 않아 새로고침하면 풀렸다.
+    const chosen = farmSelect ? farms.filter((farm) => selectedFarmIds.includes(farm.id)) : farms
     onApply({
-      farmIds: farmSelect ? chosen.map((farm) => farm.id) : [],
-      farmNames: farmSelect ? chosen.map((farm) => farm.name) : farmName ? [farmName] : [],
+      farmIds: chosen.map((farm) => farm.id),
+      farmNames: chosen.map((farm) => farm.name).filter(Boolean).length
+        ? chosen.map((farm) => farm.name)
+        : farmName
+          ? [farmName]
+          : [],
       start,
       end: nextEnd,
       reason: reasonTrimmed,
@@ -483,6 +503,5 @@ function ShippingPauseDialog({
 }
 
 export function mergePauseFarms(fromOrders: ShippingPauseFarm[]) {
-  const extra = DUMMY_PAUSE_FARMS.filter((dummy) => !fromOrders.some((farm) => farm.name === dummy.name))
-  return fromOrders.length > 0 ? [...fromOrders, ...extra] : extra.map((farm) => ({ ...farm }))
+  return fromOrders
 }
