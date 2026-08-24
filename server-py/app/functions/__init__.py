@@ -4,6 +4,7 @@ from .bankda_account_status import bankda_account_status
 from .bankda_ott import bankda_ott
 from .confirm_deposit import confirm_deposit
 from .create_order import create_order
+from .farm_today_qty import farm_today_qty
 from .kpost_shipment import kpost_shipment
 from .match_deposit import match_deposit
 from .naver_address import naver_address
@@ -17,6 +18,7 @@ FUNCTIONS: dict[str, FnHandler] = {
     "bankda-ott": bankda_ott,
     "confirm-deposit": confirm_deposit,
     "create-order": create_order,
+    "farm-today-qty": farm_today_qty,
     "kpost-shipment": kpost_shipment,
     "match-deposit": match_deposit,
     "naver-address": naver_address,
