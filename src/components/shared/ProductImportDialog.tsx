@@ -38,6 +38,8 @@ function copyPayload(source: ImportProductRow) {
     parcel_volume_cm: source.parcel_volume_cm,
     parcel_content_code: source.parcel_content_code,
     parcel_delivery_type: source.parcel_delivery_type,
+    daily_qty_limit: source.daily_qty_limit ?? 100,
+    per_order_qty_limit: source.per_order_qty_limit ?? 100,
     sale_status: 'hidden' as ProductSaleStatus,
   }
 }

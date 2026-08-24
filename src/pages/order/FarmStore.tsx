@@ -7,9 +7,17 @@ import { ProductCard } from '../../components/shared/ProductCard'
 import { ShippingScheduleNotice } from '../../components/shared/ShippingScheduleNotice'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { PageSpinner } from '../../components/ui/Feedback'
 import { getCart, setCart, type CartItem } from '../../lib/cart'
 import { formatPrice, kakaoChannelHref } from '../../lib/format'
+import { invokeFunction } from '../../lib/functions'
+import {
+  emptyTodayQty,
+  isQtyVolumeExceeded,
+  QTY_VOLUME_WARNING,
+  type TodayQty,
+} from '../../lib/qtyLimits'
 import { activeShippingPause } from '../../lib/shippingPause'
 import { useAuth } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
@@ -23,6 +31,8 @@ export function FarmStore() {
   const [farm, setFarm] = useState<Farm | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [cart, setCartState] = useState<CartItem[]>([])
+  const [todayQty, setTodayQty] = useState<TodayQty>(emptyTodayQty())
+  const [volumeDialogOpen, setVolumeDialogOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -37,13 +47,17 @@ export function FarmStore() {
       }
       const farmData = farmRow as Farm
       setFarm(farmData)
-      const { data: productRows } = await supabase
-        .from('products')
-        .select('*')
-        .eq('farm_id', farmData.id)
-        .eq('is_active', true)
-        .order('sort_order')
+      const [{ data: productRows }, qty] = await Promise.all([
+        supabase
+          .from('products')
+          .select('*')
+          .eq('farm_id', farmData.id)
+          .eq('is_active', true)
+          .order('sort_order'),
+        invokeFunction<TodayQty>('farm-today-qty', { farmId: farmData.id }).catch(() => emptyTodayQty()),
+      ])
       setProducts((productRows as Product[]) ?? [])
+      setTodayQty(qty)
       setLoading(false)
     }
     void load()
@@ -58,6 +72,16 @@ export function FarmStore() {
   const selectedCount = selected.reduce((sum, product) => sum + (qtyById[product.id] ?? 0), 0)
   const total = selected.reduce((sum, product) => sum + product.price * (qtyById[product.id] ?? 0), 0)
 
+  const volumeWarning = Boolean(
+    farm &&
+      isQtyVolumeExceeded({
+        farm,
+        products,
+        cart,
+        today: todayQty,
+      }),
+  )
+
   function updateQty(productId: string, quantity: number) {
     const product = products.find((item) => item.id === productId)
     if (product && !isProductOrderable(product)) return
@@ -65,6 +89,12 @@ export function FarmStore() {
     if (quantity > 0) next.push({ productId, quantity })
     setCart(farmSlug, next)
     setCartState(next)
+  }
+
+  function goCheckout() {
+    const path = `/farm/${farmSlug}/checkout`
+    if (user) navigate(path)
+    else openLogin({ next: path })
   }
 
   const kakaoHref = kakaoChannelHref(farm?.kakao_channel_url)
@@ -118,7 +148,12 @@ export function FarmStore() {
             <p className="text-sm text-gray-700">{farm.description || farm.product_summary}</p>
           </Card>
         ) : null}
-        <ShippingScheduleNotice days={farm.delivery_days} farm={farm} />
+        <ShippingScheduleNotice
+          days={farm.delivery_days}
+          farm={farm}
+          volumeWarning={volumeWarning}
+          volumeWarningMessage={QTY_VOLUME_WARNING}
+        />
         {products.length === 0 ? (
           <p className="text-center text-muted py-10">판매 중인 상품이 없습니다</p>
         ) : (
@@ -156,9 +191,8 @@ export function FarmStore() {
             <Button
               size="lg"
               onClick={() => {
-                const path = `/farm/${farmSlug}/checkout`
-                if (user) navigate(path)
-                else openLogin({ next: path })
+                if (volumeWarning) setVolumeDialogOpen(true)
+                else goCheckout()
               }}
             >
               주문하기
@@ -166,6 +200,17 @@ export function FarmStore() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={volumeDialogOpen}
+        title="배송 일정 확인"
+        description={QTY_VOLUME_WARNING}
+        confirmLabel="확인하고 주문하기"
+        onCancel={() => setVolumeDialogOpen(false)}
+        onConfirm={() => {
+          setVolumeDialogOpen(false)
+          goCheckout()
+        }}
+      />
     </div>
   )
 }

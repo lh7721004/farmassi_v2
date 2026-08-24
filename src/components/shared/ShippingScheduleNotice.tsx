@@ -44,9 +44,17 @@ interface ShippingScheduleNoticeProps {
   /** 농가가 정한 배송 가능 요일. 비어 있으면 일반 안내를 쓴다. */
   days?: number[] | null
   farm?: ShippingPauseFields | null
+  /** 일일/제품당/1회 한도를 넘었을 때 빨간 안내. 주문은 막지 않는다. */
+  volumeWarning?: boolean
+  volumeWarningMessage?: string
 }
 
-export function ShippingScheduleNotice({ days, farm }: ShippingScheduleNoticeProps = {}) {
+export function ShippingScheduleNotice({
+  days,
+  farm,
+  volumeWarning = false,
+  volumeWarningMessage,
+}: ShippingScheduleNoticeProps = {}) {
   const pause = activeShippingPause(farm)
   if (pause) {
     return (
@@ -72,6 +80,25 @@ export function ShippingScheduleNotice({ days, farm }: ShippingScheduleNoticePro
   const detail = shipDate
     ? `${label}요일 출고 · 출고 후 1~2일 내 도착`
     : '평일 17시 이전까지 주문 시 다음날 출고, 1~2일 내 도착'
+
+  if (volumeWarning) {
+    return (
+      <Card className="flex items-start gap-2 border-red-200 bg-red-50 px-3 py-2.5">
+        <Truck className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+        <div className="min-w-0">
+          <p className="text-[13px] leading-snug text-red-950">
+            <span className="font-semibold text-red-900">예상 배송일정</span>
+            <span className="ml-1.5 whitespace-nowrap font-semibold text-red-700">{headline}</span>
+            {' · '}
+            {detail}
+          </p>
+          <p className="mt-0.5 text-xs font-medium leading-snug text-red-700">
+            {volumeWarningMessage ?? '현재 주문 물량 증가로 예상배송일정을 확인해주세요'}
+          </p>
+        </div>
+      </Card>
+    )
+  }
 
   return (
     <Card className="flex items-start gap-2 border-primary/15 bg-primary-light px-3 py-2.5">
