@@ -1,5 +1,14 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { Pencil, Check, ChevronLeft, ChevronRight, Download, Minus, Plus } from 'lucide-react'
+import {
+  Pencil,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Minus,
+  Plus,
+} from 'lucide-react'
 import { AppShell } from '../../components/layout/AppShell'
 import { Header } from '../../components/layout/Header'
 import { Button } from '../../components/ui/Button'
@@ -56,23 +65,46 @@ const DUMMY_FARMS: DummyFarm[] = [
   { id: 'jinyoung', name: '진영농원', deliveryDays: [0, 2, 4, 6] },
 ]
 
+/** 팔린 물건: 기본으로 보이는 상위 품목 수 */
+const VISIBLE_PRODUCT_LIMIT = 3
+
 /** 농원별 판매 품목 더미 */
 const DUMMY_PRODUCTS: Record<string, { id: string; name: string }[]> = {
   jooyoung: [
     { id: 'jy-peach', name: '복숭아 2kg' },
     { id: 'jy-grape', name: '캠벨포도 2kg' },
     { id: 'jy-apple', name: '사과 5kg' },
+    { id: 'jy-plum', name: '자두 2kg' },
+    { id: 'jy-pear', name: '배 5kg' },
+    { id: 'jy-other', name: '기타' },
   ],
   takine: [
     { id: 'tk-plum', name: '자두 2kg' },
     { id: 'tk-peach', name: '백도복숭아 2kg' },
     { id: 'tk-tomato', name: '방울토마토 1kg' },
+    { id: 'tk-grape', name: '샤인머스켓 2kg' },
+    { id: 'tk-apple', name: '사과 3kg' },
+    { id: 'tk-other', name: '기타' },
   ],
   jinyoung: [
     { id: 'jn-pear', name: '배 5kg' },
     { id: 'jn-persimmon', name: '단감 5kg' },
     { id: 'jn-chestnut', name: '밤 2kg' },
+    { id: 'jn-grape', name: '캠벨포도 2kg' },
+    { id: 'jn-peach', name: '황도복숭아 2kg' },
+    { id: 'jn-other', name: '기타' },
   ],
+}
+
+/** 판매 건수 많은 순. 동점이면 카탈로그 순서 유지 */
+function sortProductsByQty<T extends { id: string }>(
+  products: T[],
+  qtyMap: Record<string, number>,
+): T[] {
+  return products
+    .map((p, index) => ({ p, index, qty: qtyMap[p.id] ?? 0 }))
+    .sort((a, b) => b.qty - a.qty || a.index - b.index)
+    .map(({ p }) => p)
 }
 
 function emptyProductQty(): Record<string, Record<string, number>> {
@@ -320,6 +352,8 @@ export function AdminShippingHistory() {
   } | null>(null)
   const [exportBusy, setExportBusy] = useState(false)
   const [exportError, setExportError] = useState('')
+  /** 팔린 물건 전체 펼침 — `${date}:${farmId}` */
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(() => new Set())
 
   const viewMonthKey = monthKey(viewYear, viewMonth)
 
@@ -882,7 +916,18 @@ export function AdminShippingHistory() {
                         const qtyMap = day.productQty[farm.id] ?? {}
                         const allocated = productQtySum(qtyMap)
                         const remaining = Math.max(0, target - allocated)
-                        const products = DUMMY_PRODUCTS[farm.id] ?? []
+                        const products = sortProductsByQty(
+                          DUMMY_PRODUCTS[farm.id] ?? [],
+                          qtyMap,
+                        )
+                        const productExpandKey = `${day.date}:${farm.id}`
+                        const productsExpanded = expandedProducts.has(productExpandKey)
+                        const hasMoreProducts = products.length > VISIBLE_PRODUCT_LIMIT
+                        const visibleProducts =
+                          productsExpanded || !hasMoreProducts
+                            ? products
+                            : products.slice(0, VISIBLE_PRODUCT_LIMIT)
+                        const hiddenCount = products.length - VISIBLE_PRODUCT_LIMIT
                         const canEditProducts = editable && target > 0
                         const matched = target > 0 && allocated === target
                         return (
@@ -908,7 +953,7 @@ export function AdminShippingHistory() {
                                     : ''}
                                 </p>
                                 <ul className="space-y-1">
-                                  {products.map((product) => {
+                                  {visibleProducts.map((product) => {
                                     const qty = qtyMap[product.id] ?? 0
                                     return (
                                       <li
@@ -965,6 +1010,31 @@ export function AdminShippingHistory() {
                                     )
                                   })}
                                 </ul>
+                                {hasMoreProducts ? (
+                                  <button
+                                    type="button"
+                                    aria-expanded={productsExpanded}
+                                    onClick={() =>
+                                      setExpandedProducts((prev) => {
+                                        const next = new Set(prev)
+                                        if (productsExpanded) next.delete(productExpandKey)
+                                        else next.add(productExpandKey)
+                                        return next
+                                      })
+                                    }
+                                    className="inline-flex items-center gap-0.5 text-[11px] text-muted hover:text-gray-700"
+                                  >
+                                    {productsExpanded
+                                      ? '접기'
+                                      : `펼쳐보기 · ${hiddenCount}개`}
+                                    <ChevronDown
+                                      className={[
+                                        'h-3 w-3 transition-transform',
+                                        productsExpanded ? 'rotate-180' : '',
+                                      ].join(' ')}
+                                    />
+                                  </button>
+                                ) : null}
                               </div>
                             )}
                           </td>
