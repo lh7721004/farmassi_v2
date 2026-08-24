@@ -288,6 +288,26 @@ function ShippingPauseDialog({
     }
   }, [open, initial, today, farmSelect, onClose])
 
+  // 공휴일은 달력에 빨갛게 표시한다. 정지 기간을 고를 때 연휴가 어디인지
+  // 눈으로 보여야 하기 때문이다. 이름은 title 로 붙인다.
+  const [holidays, setHolidays] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (!open) return
+    let alive = true
+    void (async () => {
+      const from = ymd(year, month, 1)
+      const to = ymd(year, month, daysInMonth(year, month))
+      const { data } = await supabase
+        .from('holidays').select('holiday_date, name')
+        .gte('holiday_date', from).lte('holiday_date', to)
+      if (!alive) return
+      const map: Record<string, string> = {}
+      for (const row of (data ?? []) as any[]) map[row.holiday_date] = row.name
+      setHolidays(map)
+    })()
+    return () => { alive = false }
+  }, [open, year, month])
+
   const cells = useMemo(() => {
     const firstWeekday = new Date(year, month - 1, 1).getDay()
     const count = daysInMonth(year, month)
@@ -440,7 +460,7 @@ function ShippingPauseDialog({
             </div>
             <div className="grid grid-cols-7 text-center text-xs text-muted">
               {WEEKDAYS.map((label) => (
-                <div key={label} className="py-1">
+                <div key={label} className={`py-1 ${label === '일' ? 'text-red-500' : ''}`}>
                   {label}
                 </div>
               ))}
@@ -454,6 +474,13 @@ function ShippingPauseDialog({
                 const inMiddle = Boolean(start && rangeEnd && day > start && day < rangeEnd)
                 const isSingle = Boolean(start && rangeEnd && start === rangeEnd && day === start)
                 const isToday = day === today
+                // 공휴일과 일요일은 우체국이 쉬는 날이라 빨갛게 보여준다.
+                const holidayName = holidays[day]
+                const isSunday = new Date(
+                  Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8)),
+                ).getDay() === 0
+                const restDay = Boolean(holidayName) || isSunday
+                const selected = isStart || isEnd || isSingle
                 return (
                   <div
                     key={day}
@@ -465,10 +492,13 @@ function ShippingPauseDialog({
                       type="button"
                       disabled={disabled}
                       onClick={() => pickDay(day)}
+                      title={holidayName ?? undefined}
                       className={`flex h-10 w-full items-center justify-center text-sm ${
-                        disabled ? 'text-gray-300' : 'text-gray-800'
-                      } ${isStart || isEnd || isSingle ? 'rounded-full bg-primary font-semibold text-white' : ''} ${
-                        isToday && !isStart && !isEnd && !isSingle ? 'font-semibold text-primary' : ''
+                        disabled
+                          ? restDay ? 'text-red-200' : 'text-gray-300'
+                          : restDay ? 'text-red-600' : 'text-gray-800'
+                      } ${selected ? 'rounded-full bg-primary font-semibold text-white' : ''} ${
+                        isToday && !selected ? 'font-semibold text-primary' : ''
                       }`}
                     >
                       {Number(day.slice(8))}
