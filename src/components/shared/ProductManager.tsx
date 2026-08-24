@@ -59,38 +59,39 @@ interface ProductFormValues {
   per_order_qty_limit: string
 }
 
-const UNIT_OPTIONS = KPOST_WEIGHTS.map((value) => `${value}kg`)
-
-function weightFromUnit(unit: string) {
-  const match = unit.trim().match(/^(\d+)\s*kg$/i)
-  if (!match) return null
-  return KPOST_WEIGHTS.find((value) => value === match[1]) ?? null
-}
-
-function unitFromWeight(weight: string) {
-  return `${weight}kg`
-}
-
-function normalizeUnit(unit: string | null | undefined, parcelWeight: string) {
+/** '5kg', '5 kg', '5' → 숫자. '박스'·'개' 등은 null. */
+function kgAmountFromUnit(unit: string | null | undefined): number | null {
   const raw = unit?.trim() ?? ''
-  if (!raw) return unitFromWeight(parcelWeight)
-  const weight = weightFromUnit(raw)
-  return weight ? unitFromWeight(weight) : raw
+  if (!raw) return null
+  const match = raw.match(/^(\d+(?:\.\d+)?)\s*kg$/i) ?? raw.match(/^(\d+(?:\.\d+)?)$/)
+  if (!match) return null
+  const value = Number(match[1])
+  return Number.isFinite(value) && value > 0 ? value : null
+}
+
+/** 택배 구간과 맞는 kg 이면 그 값, 아니면 null. */
+function kpostWeightFromUnit(unit: string) {
+  const amount = kgAmountFromUnit(unit)
+  if (amount == null) return null
+  const key = Number.isInteger(amount) ? String(amount) : null
+  if (!key) return null
+  return KPOST_WEIGHTS.find((value) => value === key) ?? null
+}
+
+function formatUnitKg(amount: number) {
+  const text = Number.isInteger(amount) ? String(amount) : String(amount)
+  return `${text}kg`
 }
 
 function withCurrentOption(options: readonly string[], current: string) {
   return current && !options.includes(current) ? [current, ...options] : [...options]
 }
 
-function unitSelectOptions(current: string) {
-  return withCurrentOption(UNIT_OPTIONS, current)
-}
-
 const emptyProductForm: ProductFormValues = {
   name: '',
   price: '',
   list_price: '',
-  unit: unitFromWeight('5'),
+  unit: '5',
   description: '',
   image_url: '',
   parcel_weight_kg: '5',
@@ -102,12 +103,15 @@ const emptyProductForm: ProductFormValues = {
 }
 
 function productToForm(product: Product): ProductFormValues {
-  const parcel_weight_kg = weightFromUnit(product.unit ?? '') ?? product.parcel_weight_kg
+  const unitKg = kgAmountFromUnit(product.unit)
+  const parcel_weight_kg =
+    (unitKg != null ? kpostWeightFromUnit(formatUnitKg(unitKg)) : null) ?? product.parcel_weight_kg
   return {
     name: product.name,
     price: String(product.price),
     list_price: product.list_price === null ? '' : String(product.list_price),
-    unit: normalizeUnit(product.unit, parcel_weight_kg),
+    // 박스·개 등 비-kg 값은 택배 중량으로 바꿔 kg 숫자만 쓴다.
+    unit: String(unitKg ?? (Number(parcel_weight_kg) || 5)),
     description: product.description ?? '',
     image_url: product.image_url ?? '',
     parcel_weight_kg,
@@ -120,12 +124,14 @@ function productToForm(product: Product): ProductFormValues {
 }
 
 function formPayload(form: ProductFormValues) {
+  const unitKg = kgAmountFromUnit(form.unit)
+  if (unitKg == null) throw new Error('단위(kg)를 숫자로 입력하세요.')
   return {
     name: form.name.trim(),
     price: Number(form.price),
     // 비워 두면 할인 없음. 0 을 넣어도 할인으로 치지 않는다(표시 조건이 price 초과).
     list_price: form.list_price.trim() === '' ? null : Number(form.list_price),
-    unit: form.unit.trim() || null,
+    unit: formatUnitKg(unitKg),
     description: form.description.trim() || null,
     parcel_weight_kg: form.parcel_weight_kg,
     parcel_volume_cm: form.parcel_volume_cm,
@@ -202,22 +208,25 @@ function ProductFormCard({
               : '비워 두면 할인 표시가 없습니다.'}
         </p>
       </div>
-      <Select
-        label="단위"
-        value={form.unit}
-        onChange={(e) => {
-          const unit = e.target.value
-          onChange('unit', unit)
-          const weight = weightFromUnit(unit)
-          if (weight) onChange('parcel_weight_kg', weight)
-        }}
-      >
-        {unitSelectOptions(form.unit).map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </Select>
+      <div>
+        <Input
+          label="단위 (kg)"
+          type="number"
+          min={0.1}
+          step="any"
+          value={form.unit}
+          onChange={(e) => {
+            const next = e.target.value
+            onChange('unit', next)
+            const kpost = kpostWeightFromUnit(next)
+            if (kpost) onChange('parcel_weight_kg', kpost)
+          }}
+          placeholder="예: 5"
+        />
+        <p className="mt-1 text-xs text-muted">
+          kg 숫자만 입력합니다. &quot;박스&quot;·&quot;개&quot; 같은 값은 저장되지 않습니다.
+        </p>
+      </div>
       <Textarea label="설명" value={form.description} onChange={(e) => onChange('description', e.target.value)} />
       <div className="grid grid-cols-2 gap-3">
         <Input
@@ -273,7 +282,7 @@ function ProductFormCard({
           onChange={(e) => {
             const weight = e.target.value
             onChange('parcel_weight_kg', weight)
-            onChange('unit', unitFromWeight(weight))
+            onChange('unit', weight)
           }}
         >
           {withCurrentOption(KPOST_WEIGHTS, form.parcel_weight_kg).map((value) => (
@@ -631,7 +640,13 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
 
   async function save() {
     setError('')
-    const payload = formPayload(form)
+    let payload: ReturnType<typeof formPayload>
+    try {
+      payload = formPayload(form)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '입력을 확인하세요.')
+      return
+    }
     if (!payload.name || !Number.isFinite(payload.price) || payload.price < 0) {
       setError('상품명과 가격을 입력하세요.')
       return
