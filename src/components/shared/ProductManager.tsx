@@ -19,6 +19,7 @@ import {
   PRODUCT_SALE_STATUS_LABEL,
   PRODUCT_SALE_STATUS_OPTIONS,
   productSaleStatus,
+  type Farm,
   type Product,
   type ProductSaleStatus,
 } from '../../types/models'
@@ -52,6 +53,8 @@ interface ProductFormValues {
   parcel_volume_cm: string
   parcel_content_code: string
   parcel_delivery_type: string
+  daily_qty_limit: string
+  per_order_qty_limit: string
 }
 
 const UNIT_OPTIONS = KPOST_WEIGHTS.map((value) => `${value}kg`)
@@ -92,6 +95,8 @@ const emptyProductForm: ProductFormValues = {
   parcel_volume_cm: '80',
   parcel_content_code: '농/수/축산물(일반)',
   parcel_delivery_type: '',
+  daily_qty_limit: '100',
+  per_order_qty_limit: '100',
 }
 
 function productToForm(product: Product): ProductFormValues {
@@ -107,6 +112,8 @@ function productToForm(product: Product): ProductFormValues {
     parcel_volume_cm: product.parcel_volume_cm,
     parcel_content_code: product.parcel_content_code,
     parcel_delivery_type: product.parcel_delivery_type,
+    daily_qty_limit: String(product.daily_qty_limit ?? 100),
+    per_order_qty_limit: String(product.per_order_qty_limit ?? 100),
   }
 }
 
@@ -122,6 +129,8 @@ function formPayload(form: ProductFormValues) {
     parcel_volume_cm: form.parcel_volume_cm,
     parcel_content_code: form.parcel_content_code,
     parcel_delivery_type: form.parcel_delivery_type,
+    daily_qty_limit: Math.max(1, Number(form.daily_qty_limit) || 100),
+    per_order_qty_limit: Math.max(1, Number(form.per_order_qty_limit) || 100),
   }
 }
 
@@ -208,6 +217,25 @@ function ProductFormCard({
         ))}
       </Select>
       <Textarea label="설명" value={form.description} onChange={(e) => onChange('description', e.target.value)} />
+      <div className="grid grid-cols-2 gap-3">
+        <Input
+          label="일일 주문 한도"
+          type="number"
+          min={1}
+          value={form.daily_qty_limit}
+          onChange={(e) => onChange('daily_qty_limit', e.target.value)}
+        />
+        <Input
+          label="1회 주문 한도"
+          type="number"
+          min={1}
+          value={form.per_order_qty_limit}
+          onChange={(e) => onChange('per_order_qty_limit', e.target.value)}
+        />
+      </div>
+      <p className="text-xs text-muted">
+        한도를 넘어도 주문은 받습니다. 매장에서 예상 배송일정이 빨간색으로 바뀌고 안내 문구가 뜹니다.
+      </p>
       <div>
         <span className="text-xs font-medium text-muted">이미지</span>
         {imagePreview ? (
@@ -346,6 +374,10 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
   const [imageRemoved, setImageRemoved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [farmDailyLimit, setFarmDailyLimit] = useState('100')
+  const [farmLimitMessage, setFarmLimitMessage] = useState('')
+  const [farmLimitError, setFarmLimitError] = useState('')
+  const [farmLimitSaving, setFarmLimitSaving] = useState(false)
   const productsRef = useRef(products)
   const dragIdRef = useRef<string | null>(null)
   productsRef.current = products
@@ -366,6 +398,12 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
     onCountChange?.(list.length)
   }
 
+  async function loadFarmLimit() {
+    const { data } = await supabase.from('farms').select('daily_qty_limit').eq('id', farmId).maybeSingle()
+    const farm = data as Pick<Farm, 'daily_qty_limit'> | null
+    setFarmDailyLimit(String(farm?.daily_qty_limit ?? 100))
+  }
+
   useEffect(() => {
     setForm(emptyProductForm)
     setEditingId(null)
@@ -375,6 +413,9 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
     setSaving(false)
     setReordering(false)
     setDraggingId(null)
+    setFarmLimitMessage('')
+    setFarmLimitError('')
+    void loadFarmLimit()
     supabase
       .from('products')
       .select('*')
@@ -386,6 +427,24 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
         onCountChange?.(list.length)
       })
   }, [farmId, onCountChange])
+
+  async function saveFarmDailyLimit() {
+    setFarmLimitError('')
+    setFarmLimitMessage('')
+    const value = Math.max(1, Number(farmDailyLimit) || 100)
+    setFarmLimitSaving(true)
+    const { error: updateError } = await supabase
+      .from('farms')
+      .update({ daily_qty_limit: value })
+      .eq('id', farmId)
+    setFarmLimitSaving(false)
+    if (updateError) {
+      setFarmLimitError(updateError.message)
+      return
+    }
+    setFarmDailyLimit(String(value))
+    setFarmLimitMessage('저장했습니다.')
+  }
 
   function update<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -542,6 +601,29 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
   if (isFarm) {
     return (
       <div className="space-y-4">
+        <Card className="space-y-3">
+          <h3 className="font-semibold">농가 일일 주문 한도</h3>
+          <p className="text-xs text-muted">
+            오늘 이 농가에 들어온 전체 수량(입금 전 포함, 취소 제외) 기준입니다. 넘어도 주문은
+            받으며 매장에서 경고만 표시합니다.
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[8rem] flex-1">
+              <Input
+                label="일일 전체 한도"
+                type="number"
+                min={1}
+                value={farmDailyLimit}
+                onChange={(e) => setFarmDailyLimit(e.target.value)}
+              />
+            </div>
+            <Button disabled={farmLimitSaving} onClick={() => void saveFarmDailyLimit()}>
+              {farmLimitSaving ? '저장 중...' : '저장'}
+            </Button>
+          </div>
+          <ErrorText>{farmLimitError}</ErrorText>
+          {farmLimitMessage ? <p className="text-sm text-primary">{farmLimitMessage}</p> : null}
+        </Card>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Button onClick={toggleAdd} disabled={reordering}>
