@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, LocateFixed, MapPin, Search } from 'lucide-react'
 import { ShippingScheduleNotice } from '../../components/shared/ShippingScheduleNotice'
+import { activeShippingPause, shippingPauseMessage } from '../../lib/shippingPause'
 import { Header } from '../../components/layout/Header'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -105,6 +106,7 @@ export function Checkout() {
       product,
       quantity: qtyById[product.id] ?? 0,
     }))
+  const pause = activeShippingPause(farm)
   const total = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0)
 
   if (loading) return <PageSpinner />
@@ -363,7 +365,13 @@ export function Checkout() {
           )}
         </Card>
 
-        <ShippingScheduleNotice days={farm.delivery_days} />
+        {pause ? (
+          <Card className="border-amber-200 bg-amber-50">
+            <p className="text-sm text-amber-900">{shippingPauseMessage(pause)}</p>
+          </Card>
+        ) : (
+          <ShippingScheduleNotice days={farm.delivery_days} />
+        )}
 
         <Card className="bg-primary-light border-primary/20">
           <p className="text-sm text-gray-800">
@@ -372,8 +380,12 @@ export function Checkout() {
         </Card>
 
         <ErrorText>{error}</ErrorText>
-        <Button type="submit" fullWidth size="lg" disabled={pending || !farm?.is_active}>
-          {!farm?.is_active ? '지금은 주문을 받지 않습니다' : `${formatPrice(total)} 주문하기`}
+        <Button type="submit" fullWidth size="lg" disabled={pending || !farm?.is_active || Boolean(pause)}>
+          {!farm?.is_active
+            ? '지금은 주문을 받지 않습니다'
+            : pause
+              ? '배송 일시정지 중입니다'
+              : `${formatPrice(total)} 주문하기`}
         </Button>
       </form>
     </div>
