@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, LocateFixed, MapPin, Search } from 'lucide-react'
-import { DeliveryEstimate } from '../../components/shared/DeliveryEstimate'
+import { ShippingScheduleNotice } from '../../components/shared/ShippingScheduleNotice'
 import { Header } from '../../components/layout/Header'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -357,7 +357,7 @@ export function Checkout() {
           )}
         </Card>
 
-        <DeliveryEstimate days={farm.delivery_days} />
+        <ShippingScheduleNotice days={farm.delivery_days} />
 
         <Card className="bg-primary-light border-primary/20">
           <p className="text-sm text-gray-800">

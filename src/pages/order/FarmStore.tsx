@@ -116,7 +116,7 @@ export function FarmStore() {
             <p className="text-sm text-gray-700">{farm.description || farm.product_summary}</p>
           </Card>
         ) : null}
-        <ShippingScheduleNotice />
+        <ShippingScheduleNotice days={farm.delivery_days} />
         {products.length === 0 ? (
           <p className="text-center text-muted py-10">판매 중인 상품이 없습니다</p>
         ) : (
