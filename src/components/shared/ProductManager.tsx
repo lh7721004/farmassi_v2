@@ -625,7 +625,13 @@ export function ProductManager({ farmId, variant = 'admin', onCountChange }: Pro
             })}
           </div>
         )}
-        <ProductImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
+        <ProductImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          targetFarmId={farmId}
+          nextSortOrder={products.reduce((max, product) => Math.max(max, product.sort_order), -1) + 1}
+          onImported={() => void load()}
+        />
       </div>
     )
   }

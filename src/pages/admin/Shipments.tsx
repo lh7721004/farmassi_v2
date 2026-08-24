@@ -15,13 +15,17 @@ const ORDER_SELECT =
 export function AdminShipments() {
   const [orders, setOrders] = useState<OrderRow[]>([])
 
-  useEffect(() => {
-    supabase
+  async function loadOrders() {
+    const { data } = await supabase
       .from('orders')
       .select(ORDER_SELECT)
       .in('status', ['paid', 'packing'])
       .order('created_at', { ascending: false })
-      .then(({ data }) => setOrders((data as OrderRow[]) ?? []))
+    setOrders((data as OrderRow[]) ?? [])
+  }
+
+  useEffect(() => {
+    void loadOrders()
   }, [])
 
   const groups = useMemo(() => groupOrdersByFarm(orders), [orders])
@@ -46,7 +50,11 @@ export function AdminShipments() {
                 <h3 className="font-semibold">{group.name}</h3>
                 <p className="text-sm text-muted">출고 대기 {group.orders.length}건</p>
               </div>
-              <KpostParcelExport orders={group.orders} fileStem={`kpost_${group.slug}`} />
+              <KpostParcelExport
+                orders={group.orders}
+                fileStem={`kpost_${group.slug}`}
+                onUpdated={() => void loadOrders()}
+              />
             </Card>
             {group.orders.map((order) => (
               <OrderItem key={order.id} order={toOrderListModel(order)} />
