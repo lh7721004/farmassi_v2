@@ -107,13 +107,19 @@ export async function kakaoCallback(
         [kakaoId],
       )
       if (found.rows[0]) {
-        // 닉네임/사진이 바뀌었을 수 있으니 갱신한다.
+        const userId = found.rows[0].user_id as string
+        // 프로필을 직접 입력한 사용자의 이름은 유지하고, 사진만 갱신한다.
         await db.query(
-          `update public.profiles set display_name = $2, avatar_url = coalesce($3, avatar_url)
-             where id = $1`,
-          [found.rows[0].user_id, nickname, avatar],
+          `update public.profiles
+             set display_name = case
+                   when phone is null or btrim(phone) = '' then $2
+                   else display_name
+                 end,
+                 avatar_url = coalesce($3, avatar_url)
+           where id = $1`,
+          [userId, nickname, avatar],
         )
-        return found.rows[0].user_id as string
+        return userId
       }
 
       // auth.users 에 넣으면 트리거가 public.profiles 를 만든다.
@@ -130,8 +136,18 @@ export async function kakaoCallback(
       return id
     })
 
+    const needsProfile = await withAdmin(async (db) => {
+      const row = await db.query(
+        `select phone from public.profiles where id = $1`,
+        [userId],
+      )
+      const phone = row.rows[0]?.phone as string | null | undefined
+      return !phone?.trim()
+    })
+
     const url = new URL(target)
     url.searchParams.set('code', sign({ sub: userId, role: 'authenticated' }))
+    if (needsProfile) url.searchParams.set('profile', '1')
     res.writeHead(302, { Location: url.toString() }).end()
   } catch (error) {
     bail(error instanceof Error ? error.message : '로그인에 실패했습니다.')
