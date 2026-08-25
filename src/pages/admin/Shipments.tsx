@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { History, PenLine } from 'lucide-react'
 import { AppShell } from '../../components/layout/AppShell'
 import { Header } from '../../components/layout/Header'
 import { KpostParcelExport } from '../../components/shared/KpostParcelExport'
 import { OrderItem } from '../../components/shared/OrderItem'
 import { mergePauseFarms, ShippingPausePanel } from '../../components/shared/ShippingPausePanel'
+import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { adminNavItems } from '../../config/adminNav'
 import { groupOrdersByFarm, toOrderListModel, type OrderRow } from '../../lib/orders'
@@ -52,7 +55,26 @@ export function AdminShipments() {
 
   return (
     <AppShell navItems={adminNavItems} roleLabel="관리자" settingsPath="/admin/none">
-      <Header title="송장" subtitle="농가별 우체국 창구소포 엑셀" />
+      <Header
+        title="송장"
+        subtitle="농가별 우체국 창구소포 엑셀"
+        rightElement={
+          <div className="flex items-center gap-1.5">
+            <Link to="/admin/shipping-manual">
+              <Button size="sm" variant="outline">
+                <PenLine className="h-4 w-4" />
+                직접작성
+              </Button>
+            </Link>
+            <Link to="/admin/shipping-history">
+              <Button size="sm" variant="outline">
+                <History className="h-4 w-4" />
+                배송이력 관리
+              </Button>
+            </Link>
+          </div>
+        }
+      />
       <div className="px-4 py-4 md:px-6 max-w-5xl mx-auto space-y-4">
         <ShippingPausePanel farmSelect farms={pauseFarms} />
         <p className="text-sm text-muted">
