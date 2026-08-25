@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from ..sb import sb
 from ..shared.mailer import send_order_mail
 from ..shared.push import notify_farm_members
+from ..shared.shipping_fee import fee_for
 from ..shared.util import now_iso, random_code, seoul_date_compact
 from .types import FnCtx, FnResult, fail, ok
 
@@ -43,6 +44,8 @@ async def create_order(ctx: FnCtx) -> FnResult:
         product = by_id.get(item["productId"])
         if not product or item["quantity"] < 1:
             raise Exception("판매 중인 상품만 주문할 수 있습니다.")
+        # 배송비는 수량에 비례하지 않는다. 상품마다 정해 둔 구간표에서 뽑는다.
+        shipping = fee_for(product.get("shipping_fees"), item["quantity"])
         lines.append({
             "product_id": product["id"],
             "product_name": product["name"],
@@ -50,8 +53,13 @@ async def create_order(ctx: FnCtx) -> FnResult:
             "unit_price": product["price"],
             "quantity": item["quantity"],
             "line_amount": product["price"] * item["quantity"],
+            "shipping_fee": shipping,
         })
-    total = sum(line["line_amount"] for line in lines)
+    goods = sum(line["line_amount"] for line in lines)
+    shipping_total = sum(line["shipping_fee"] for line in lines)
+    # 손님이 실제로 보낼 금액. deposit_due_amount 가 자동 대사의 기준이라
+    # 배송비까지 더한 값이어야 한다.
+    total = goods + shipping_total
     deposit_code = random_code(6)
     order_no = f"FA{seoul_date_compact()}-{random_code(4)}"
 
@@ -73,6 +81,7 @@ async def create_order(ctx: FnCtx) -> FnResult:
         "sender_phone": (sender.get("phone") or "").strip() or None,
         "sender_address": (sender.get("address") or "").strip() or None,
         "total_amount": total,
+        "shipping_fee": shipping_total,
         "deposit_due_amount": total,
         "deposit_code": deposit_code,
     }).select("id").single()
