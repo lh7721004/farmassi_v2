@@ -18,30 +18,18 @@ export const KPOST_WEIGHTS = ['3', '5', '7', '10', '15', '20', '25', '30'] as co
 export const KPOST_VOLUMES = ['80', '100', '120', '160'] as const
 export const KPOST_DELIVERY_TYPES = ['', '대면', '비대면'] as const
 
-const KPOST_WEIGHT_LABEL: Record<string, string> = {
-  '3': '3kg 이하',
-  '5': '3kg ~ 5kg',
-  '7': '5kg ~ 7kg',
-  '10': '7kg ~ 10kg',
-  '15': '10kg ~ 15kg',
-  '20': '15kg ~ 20kg',
-  '25': '20kg ~ 25kg',
-  '30': '25kg ~ 30kg',
-}
 
-const KPOST_VOLUME_LABEL: Record<string, string> = {
-  '80': '80cm 이하',
-  '100': '80cm ~ 100cm',
-  '120': '100cm ~ 120cm',
-  '160': '120cm ~ 160cm',
-}
-
+/**
+ * 고르는 값은 우체국 요금표의 구간 상한이지만, 화면에는 숫자만 보여준다.
+ * '5kg ~ 7kg' 처럼 범위로 적었더니 무엇을 고른 건지 알기 어렵다는 지적을
+ * 받았다. 구간별 요금은 폼 위에 표로 따로 보여준다.
+ */
 export function kpostWeightLabel(value: string) {
-  return KPOST_WEIGHT_LABEL[value] ?? `${value}kg`
+  return `${value}kg`
 }
 
 export function kpostVolumeLabel(value: string) {
-  return KPOST_VOLUME_LABEL[value] ?? `${value}cm`
+  return `${value}cm`
 }
 
 export interface ParcelExcelOptions {
