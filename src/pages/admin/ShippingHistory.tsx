@@ -382,7 +382,25 @@ export function AdminShippingHistory() {
       e.returnValue = ''
     }
     window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
+
+    // 뒤로가기는 beforeunload 가 잡지 못한다. 화면 안에서 주소만 바뀌기
+    // 때문이다. 히스토리에 한 칸을 더 넣어 두고, 뒤로가기가 오면 물어본 뒤
+    // 취소하면 그 자리로 되돌린다.
+    history.pushState(null, '', location.href)
+    const onPop = () => {
+      if (window.confirm('저장하지 않은 데이터가 있습니다. 페이지에서 나가시겠습니까?')) {
+        window.removeEventListener('popstate', onPop)
+        history.back()
+        return
+      }
+      history.pushState(null, '', location.href)
+    }
+    window.addEventListener('popstate', onPop)
+
+    return () => {
+      window.removeEventListener('beforeunload', warn)
+      window.removeEventListener('popstate', onPop)
+    }
   }, [dirtyDates])
 
   function isEditable(date: string): boolean {
