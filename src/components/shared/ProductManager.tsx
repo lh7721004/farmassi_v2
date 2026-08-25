@@ -2,7 +2,7 @@ import { GripVertical, ImagePlus, Import, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
-import { Input, Select, Textarea } from '../ui/Field'
+import { Field, Input, Select, Textarea } from '../ui/Field'
 import { ErrorText } from '../ui/Feedback'
 import {
   KPOST_CONTENT_CODES,
@@ -13,6 +13,7 @@ import {
   kpostWeightLabel,
 } from '../../lib/kpostParcelExcel'
 import { PriceTag, discountRate } from './PriceTag'
+import { normalizeTiers } from '../../lib/shippingFee'
 import { deletePublicImage, preparePublicImage, uploadFarmImage } from '../../lib/storageImages'
 import { PRODUCT_IMAGE_ASPECT } from '../../lib/imageCrop'
 import { supabase } from '../../lib/supabase'
@@ -48,6 +49,8 @@ interface ProductFormValues {
   price: string
   /** 할인 전 원래 가격. 빈 문자열이면 할인 없음. */
   list_price: string
+  /** 수량 구간별 배송비 */
+  shipping_fees: { qty: number; fee: number }[]
   unit: string
   description: string
   image_url: string
@@ -91,6 +94,7 @@ const emptyProductForm: ProductFormValues = {
   name: '',
   price: '',
   list_price: '',
+  shipping_fees: [],
   unit: '5',
   description: '',
   image_url: '',
@@ -110,6 +114,7 @@ function productToForm(product: Product): ProductFormValues {
     name: product.name,
     price: String(product.price),
     list_price: product.list_price === null ? '' : String(product.list_price),
+    shipping_fees: normalizeTiers(product.shipping_fees),
     // 박스·개 등 비-kg 값은 택배 중량으로 바꿔 kg 숫자만 쓴다.
     unit: String(unitKg ?? (Number(parcel_weight_kg) || 5)),
     description: product.description ?? '',
@@ -131,6 +136,7 @@ function formPayload(form: ProductFormValues) {
     price: Number(form.price),
     // 비워 두면 할인 없음. 0 을 넣어도 할인으로 치지 않는다(표시 조건이 price 초과).
     list_price: form.list_price.trim() === '' ? null : Number(form.list_price),
+    shipping_fees: normalizeTiers(form.shipping_fees),
     unit: formatUnitKg(unitKg),
     description: form.description.trim() || null,
     parcel_weight_kg: form.parcel_weight_kg,
@@ -286,6 +292,55 @@ function ProductFormCard({
         </p>
         <p>즙 · 1box 5,000원 · 2box 7,000원 · 3box 8,000원</p>
       </div>
+      <Field label="수량별 배송비">
+        <div className="mt-1 space-y-1.5">
+          {form.shipping_fees.map((tier, index) => (
+            <div key={index} className="flex items-center gap-2 text-sm">
+              <input
+                type="number"
+                min={1}
+                value={tier.qty}
+                onChange={(e) => onChange('shipping_fees', form.shipping_fees.map((t, i) =>
+                  i === index ? { ...t, qty: Number(e.target.value) } : t))}
+                className="w-16 rounded-lg border border-gray-200 px-2 py-1.5 text-sm"
+              />
+              <span className="text-xs text-muted">개까지</span>
+              <input
+                type="number"
+                min={0}
+                step={100}
+                value={tier.fee}
+                onChange={(e) => onChange('shipping_fees', form.shipping_fees.map((t, i) =>
+                  i === index ? { ...t, fee: Number(e.target.value) } : t))}
+                className="w-24 rounded-lg border border-gray-200 px-2 py-1.5 text-sm"
+              />
+              <span className="text-xs text-muted">원</span>
+              <button
+                type="button"
+                onClick={() => onChange('shipping_fees', form.shipping_fees.filter((_, i) => i !== index))}
+                className="ml-auto text-xs text-muted hover:text-red-600"
+              >
+                삭제
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => onChange('shipping_fees', [
+              ...form.shipping_fees,
+              { qty: (form.shipping_fees.at(-1)?.qty ?? 0) + 1, fee: 0 },
+            ])}
+            className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+          >
+            + 구간 추가
+          </button>
+        </div>
+        <p className="mt-1.5 text-xs text-muted">
+          {form.shipping_fees.length === 0
+            ? '비워 두면 배송비를 따로 받지 않습니다 (상품가에 포함).'
+            : '수량이 늘어도 배송비는 비례하지 않습니다. 마지막 구간을 넘으면 그 구간이 되풀이됩니다.'}
+        </p>
+      </Field>
       <div className="grid grid-cols-2 gap-3">
         <Select
           label="택배 중량(kg)"
