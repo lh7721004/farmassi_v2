@@ -127,8 +127,11 @@ function createEmptyDay(
 }
 
 
-function farmDayTotal(cells: Record<Channel, FarmCell>): number {
-  return CHANNELS.reduce((sum, ch) => sum + cells[ch].count, 0)
+function farmDayTotal(cells: Record<Channel, FarmCell> | undefined): number {
+  // 농가가 아직 안 읽혔거나 새로 생긴 농가면 칸이 없다. 없으면 0 으로 본다 —
+  // 여기서 터지면 페이지 전체가 흰 화면이 된다.
+  if (!cells) return 0
+  return CHANNELS.reduce((sum, ch) => sum + (cells[ch]?.count ?? 0), 0)
 }
 
 function formatDisplayDate(iso: string): string {
@@ -192,7 +195,7 @@ async function downloadMonthExcel(
       )
       const row: (string | number)[] = [channel]
       for (const farm of farms) {
-        const cell = day.cells[farm.id][channel]
+        const cell = day.cells[farm.id]?.[channel] ?? emptyCell()
         row.push(cell.count || '', cell.receiptText || '')
       }
       row.push(channel === AUTO_CHANNEL ? dayGrand || '' : '')
@@ -294,7 +297,7 @@ export function AdminShippingHistory() {
         const byDate = new Map(saved.map((d) => [d.date, d]))
         for (const [date, perFarm] of Object.entries(auto)) {
           if (!date.startsWith(viewMonthKey)) continue
-          const day = byDate.get(date) ?? createEmptyDay(date)
+          const day = byDate.get(date) ?? createEmptyDay(date, farms, farmProducts)
           for (const [farmId, count] of Object.entries(perFarm)) {
             const cells = (day.cells[farmId] ??= emptyFarmCells())
             if (cells[AUTO_CHANNEL].count === 0) cells[AUTO_CHANNEL] = { count, receiptText: '' }
@@ -313,7 +316,7 @@ export function AdminShippingHistory() {
   useEffect(() => {
     setDays((prev) => {
       if (prev.some((d) => d.date === today)) return prev
-      return [createEmptyDay(today), ...prev].sort((a, b) => b.date.localeCompare(a.date))
+      return [createEmptyDay(today, farms, farmProducts), ...prev].sort((a, b) => b.date.localeCompare(a.date))
     })
   }, [today])
 
@@ -787,7 +790,7 @@ export function AdminShippingHistory() {
                             </div>
                           </td>
                           {farms.map((farm) => {
-                            const cell = day.cells[farm.id][channel]
+                            const cell = day.cells[farm.id]?.[channel] ?? emptyCell()
                             const canShip = farmCanShipOn(farm, day.date)
                             const offOpen = isOffDayUnlocked(day.date, farm.id)
                             const farmOpen = canShip || offOpen
