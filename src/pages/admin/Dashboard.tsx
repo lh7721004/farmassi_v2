@@ -19,13 +19,18 @@ export function AdminDashboard() {
 
   useEffect(() => {
     void Promise.all([
-      supabase.from('farms').select('id', { count: 'exact', head: true }),
-      supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(200),
-    ]).then(([farms, ordersRes]) => {
+      // 카드를 누르면 농가 화면이 '활성' 으로 열린다. 카드가 전체 수를 세면
+      // 눌렀을 때 숫자가 달라 보인다. 같은 기준으로 센다.
+      supabase.from('farms').select('id', { count: 'exact', head: true }).eq('is_active', true),
+      supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending_deposit'),
+      supabase.from('orders').select('id', { count: 'exact', head: true }).in('status', ['paid', 'packing']),
+      // 매출은 합계라 세는 것으로 안 되고 값을 받아야 한다. 금액 한 컬럼만 받는다.
+      supabase.from('orders').select('total_amount, status'),
+    ]).then(([farms, pending, shipping, ordersRes]) => {
       setFarmCount(farms.count ?? 0)
-      const orders = (ordersRes.data as Order[]) ?? []
-      setPendingDeposits(orders.filter((o) => o.status === 'pending_deposit').length)
-      setPaidOrders(orders.filter((o) => o.status === 'paid' || o.status === 'packing').length)
+      setPendingDeposits(pending.count ?? 0)
+      setPaidOrders(shipping.count ?? 0)
+      const orders = (ordersRes.data as Pick<Order, 'total_amount' | 'status'>[]) ?? []
       setRevenue(
         orders
           .filter((o) => o.status !== 'cancelled' && o.status !== 'pending_deposit')
@@ -46,7 +51,7 @@ export function AdminDashboard() {
         }
       />
       <div className="px-4 py-4 md:px-6 max-w-5xl mx-auto grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="농가" value={`${farmCount}곳`} icon={Sprout} to="/admin/farms" />
+        <StatCard label="활성 농가" value={`${farmCount}곳`} icon={Sprout} to="/admin/farms" />
         <StatCard
           label="입금 대기"
           value={`${pendingDeposits}건`}
@@ -56,7 +61,7 @@ export function AdminDashboard() {
         {/* 출고 대기는 paid·packing 주문 수. 송장 화면이 같은 조건으로 목록을 보여준다. */}
         <StatCard label="출고 대기" value={`${paidOrders}건`} icon={Truck} to="/admin/shipments" />
         <StatCard
-          label="매출(최근)"
+          label="매출"
           value={formatPrice(revenue)}
           icon={Package}
           to="/admin/orders"
