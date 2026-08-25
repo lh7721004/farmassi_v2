@@ -287,7 +287,20 @@ function ProductFormCard({
       */}
       <div className="rounded-xl bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-muted">
         <p className="font-medium text-gray-700">우체국 요금 참고</p>
-        <p className="mt-1">
+        {/*
+          구간별 요금표. 어떤 중량·부피를 고르면 얼마인지 숫자만 봐서는 알 수
+          없어서 요청받은 표를 그대로 둔다. 가로가 길어 좁은 화면에서는
+          옆으로 넘겨 본다.
+        */}
+        <div className="mt-1.5 overflow-x-auto">
+          <img
+            src="/reference/kpost-fee-table.png"
+            alt="우체국 등기소포 요금표 — 부피 80cm 이하부터 160cm, 중량 3kg 이하부터 30kg 구간별 요금"
+            className="h-auto w-full min-w-[560px] max-w-2xl rounded-lg border border-gray-200 bg-white"
+            loading="lazy"
+          />
+        </div>
+        <p className="mt-1.5">
           포도 · 3kg/100 4,500원 · 7kg/100 5,000원 · 15kg/120 7,000원 · 20kg/120 11,000원
         </p>
         <p>즙 · 1box 5,000원 · 2box 7,000원 · 3box 8,000원</p>
