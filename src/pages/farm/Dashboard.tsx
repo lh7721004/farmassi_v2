@@ -9,7 +9,7 @@ import { OrderItem } from '../../components/shared/OrderItem'
 import { StatCard } from '../../components/ui/StatCard'
 import { useAuth } from '../../lib/auth'
 import { useFarmWorkspace } from '../../lib/farmWorkspace'
-import { formatDate, formatPrice } from '../../lib/format'
+import { farmDisplayLocation, formatDate, formatPrice } from '../../lib/format'
 import { toOrderListModel, type OrderRow } from '../../lib/orders'
 import { supabase } from '../../lib/supabase'
 
@@ -62,7 +62,7 @@ export function FarmDashboard() {
     <>
       <Header
         title={farm.name}
-        subtitle={farm.location ?? formatDate(farm.created_at)}
+        subtitle={farmDisplayLocation(farm) || formatDate(farm.created_at)}
         rightElement={
           <>
             <FarmOrderPageLink slug={farm.slug} />

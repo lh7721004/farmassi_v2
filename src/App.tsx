@@ -5,6 +5,7 @@ import { RedirectToFarmWorkspace, RequireAdmin, RequireAuth, RequireFarmWorkspac
 import { LoginSheetProvider } from './components/auth/LoginSheet'
 import { ProfileCompletionProvider } from './components/auth/ProfileCompletionProvider'
 import { Landing } from './pages/Landing'
+import { AccountCopyPage, LegacyAccountCopyRedirect } from './pages/AccountCopyPage'
 import { Login } from './pages/auth/Login'
 import { AuthCallback } from './pages/auth/AuthCallback'
 import { AdminLogin } from './pages/auth/AdminLogin'
@@ -43,6 +44,7 @@ export default function App() {
         <ApiErrorNotice />
         <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/a" element={<LegacyAccountCopyRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/o/:farmSlug" element={<RedirectLegacyStore />} />
@@ -54,6 +56,7 @@ export default function App() {
         <Route path="/farm/settings" element={<RedirectToFarmWorkspace suffix="/settings" />} />
         <Route path="/farm/:farmSlug" element={<FarmStore />} />
         <Route path="/farm/:farmSlug/landingpage" element={<FarmLanding />} />
+        <Route path="/farm/:farmSlug/qr" element={<AccountCopyPage />} />
         <Route
           path="/farm/:farmSlug/checkout"
           element={

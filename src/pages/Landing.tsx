@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button'
 import { PageSpinner } from '../components/ui/Feedback'
 import { BRAND } from '../config/brand'
 import { useAuth } from '../lib/auth'
+import { farmDisplayLocation } from '../lib/format'
 import { supabase } from '../lib/supabase'
 import type { Farm } from '../types/models'
 
@@ -36,7 +37,7 @@ export function Landing() {
     const q = query.trim().toLowerCase()
     if (!q) return farms
     return farms.filter((farm) => {
-      const haystack = [farm.name, farm.location, farm.product_summary]
+      const haystack = [farm.name, farm.location, farm.address, farm.address_detail, farm.product_summary]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
@@ -113,7 +114,7 @@ export function Landing() {
               {filteredFarms.map((farm) => (
                 <Card key={farm.id}>
                   <p className="font-bold text-gray-900">{farm.name}</p>
-                  <p className="mt-1 text-sm text-muted">{farm.location || '지역 미등록'}</p>
+                  <p className="mt-1 text-sm text-muted">{farmDisplayLocation(farm, '지역 미등록')}</p>
                   {farm.product_summary && (
                     <p className="mt-1 text-sm text-gray-700">{farm.product_summary}</p>
                   )}

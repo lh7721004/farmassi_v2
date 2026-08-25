@@ -10,7 +10,7 @@ import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { PageSpinner } from '../../components/ui/Feedback'
 import { getCart, setCart, type CartItem } from '../../lib/cart'
-import { formatPrice, kakaoChannelHref } from '../../lib/format'
+import { farmDisplayLocation, formatPrice, kakaoChannelHref } from '../../lib/format'
 import { invokeFunction } from '../../lib/functions'
 import {
   emptyTodayQty,
@@ -112,7 +112,8 @@ export function FarmStore() {
     <div className="min-h-dvh bg-surface pb-28">
       <Header
         title={farm.name}
-        subtitle={farm.location || BRAND_SUB}
+        subtitle={farmDisplayLocation(farm, BRAND_SUB)}
+        copyableSubtitle={Boolean(farm.address?.trim())}
         showBack
         backTo={`/farm/${farmSlug}/landingpage`}
         rightElement={

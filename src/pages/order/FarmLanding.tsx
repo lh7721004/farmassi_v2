@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageSpinner } from '../../components/ui/Feedback'
 import { useAuth } from '../../lib/auth'
+import { farmDisplayLocation } from '../../lib/format'
 import { supabase } from '../../lib/supabase'
 import { parseLandingBlocks, type Farm } from '../../types/models'
 
@@ -46,7 +47,8 @@ export function FarmLanding() {
     <div className="min-h-dvh bg-surface">
       <Header
         title={farm.name}
-        subtitle={farm.location || '농가 직송'}
+        subtitle={farmDisplayLocation(farm, '농가 직송')}
+        copyableSubtitle={Boolean(farm.address?.trim())}
         rightElement={
           <div className="flex items-center gap-3">
             {isAdmin && (
@@ -91,7 +93,7 @@ export function FarmLanding() {
             <div className="rounded-2xl bg-primary p-6 text-white">
               <div className="flex items-center gap-2 mb-2">
                 <Leaf className="h-5 w-5" />
-                <span className="text-sm text-white/80">{farm.location || '농가 직송'}</span>
+                <span className="text-sm text-white/80">{farmDisplayLocation(farm, '농가 직송')}</span>
               </div>
               <h2 className="text-2xl font-bold">{farm.name}</h2>
               <p className="mt-2 text-sm text-white/80">

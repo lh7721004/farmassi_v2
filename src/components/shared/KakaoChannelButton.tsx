@@ -1,5 +1,5 @@
 import { Phone } from 'lucide-react'
-import { kakaoChannelChatHref } from '../../lib/format'
+import { kakaoChannelHref } from '../../lib/format'
 import { telHref } from '../../lib/farmShareText'
 
 interface KakaoChannelButtonProps {
@@ -10,12 +10,12 @@ interface KakaoChannelButtonProps {
 const inquiryBtnClass =
   'flex h-[45px] w-full min-w-0 items-center justify-center gap-1.5 rounded-[12px] px-2 text-[15px] font-medium sm:flex-1'
 
-export function KakaoChannelButton({ href, label = '카카오톡 문의' }: KakaoChannelButtonProps) {
-  const chatHref = kakaoChannelChatHref(href)
-  if (!chatHref) return null
+export function KakaoChannelButton({ href, label = '카카오톡 채널추가' }: KakaoChannelButtonProps) {
+  const profileHref = kakaoChannelHref(href)
+  if (!profileHref) return null
   return (
     <a
-      href={chatHref}
+      href={profileHref}
       target="_blank"
       rel="noopener noreferrer"
       className={`${inquiryBtnClass} bg-[#FEE500] text-black/85 hover:bg-[#F5DC00]`}
@@ -51,12 +51,12 @@ export function FarmInquiryButtons({
   phone?: string | null
   mobilePhone?: string | null
 }) {
-  const chatHref = kakaoChannelChatHref(kakaoChannelUrl)
+  const profileHref = kakaoChannelHref(kakaoChannelUrl)
   const callPhone = mobilePhone?.trim() || phone?.trim() || null
-  if (!chatHref && !callPhone) return null
+  if (!profileHref && !callPhone) return null
   return (
     <div className="flex flex-col gap-2 sm:flex-row">
-      {chatHref ? <KakaoChannelButton href={chatHref} /> : null}
+      {profileHref ? <KakaoChannelButton href={profileHref} /> : null}
       {callPhone ? <PhoneInquiryButton phone={callPhone} /> : null}
     </div>
   )
