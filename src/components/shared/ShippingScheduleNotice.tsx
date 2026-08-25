@@ -46,11 +46,8 @@ export function ShippingScheduleNotice({
         {/*
           정지 중이어도 출고 예정 줄은 그대로 보여준다. 정지가 끝나는 날을
           알고 있으므로 언제 나갈지 계산이 되고, 손님이 알고 싶은 것도 그것이다.
-          사유는 그 위에 한 줄로 덧붙인다.
+          사유는 그 아래에 한 줄로 덧붙인다.
         */}
-        {activePause && (
-          <p className="mt-0.5 text-xs leading-snug text-amber-800">{pauseMessage(activePause)}</p>
-        )}
         <p className="mt-0.5 text-xs leading-snug text-muted">
           {label ? `${label} 출고` : '주문 다음날 출고'} · {formatYmd(shipDate!)} 출고 예정
           {/*
@@ -70,6 +67,9 @@ export function ShippingScheduleNotice({
             </>
           ) : null}
         </p>
+        {activePause && (
+          <p className="mt-0.5 text-xs leading-snug text-amber-800">{pauseMessage(activePause)}</p>
+        )}
         {volumeWarning && volumeWarningMessage ? (
           <p className="mt-0.5 text-xs leading-snug text-amber-800">{volumeWarningMessage}</p>
         ) : null}
