@@ -39,11 +39,11 @@ npm run dev
    - Site URL: `https://farmassi.kr`
    - Redirect URLs: `http://localhost:5173/**`, `https://farmassi.kr/**`, `https://www.farmassi.kr/**`
 
-7. 배송지 검색용 **네이버 지도**를 켭니다.
-   - [네이버 클라우드](https://console.ncloud.com) → Maps → Application에서 Dynamic Map, Geocoding, Reverse Geocoding을 선택합니다.
-   - Web 서비스 URL: `http://localhost`, `http://farmassi.kr`
-   - Client ID는 `.env.local`의 `VITE_NAVER_MAP_CLIENT_ID`에 넣습니다.
-   - Client Secret은 프론트에 넣지 말고 Edge Function 시크릿 `NAVER_MAP_CLIENT_SECRET`으로 등록합니다.
+7. 배송지 검색용 **카카오맵**을 켭니다.
+   - [카카오 개발자](https://developers.kakao.com) → 내 애플리케이션 → 앱 키의 **JavaScript 키**를 사용합니다.
+   - 플랫폼 → Web: `http://localhost:5173`, `https://farmassi.kr`, `https://www.farmassi.kr`, `https://dev.farmassi.kr`
+   - JavaScript 키는 `.env`의 `VITE_KAKAO_JS_KEY`에 넣습니다.
+   - 주소 검색·역지오코딩은 서버의 `KAKAO_REST_API_KEY`(REST API 키)를 사용합니다.
 
 8. Authentication → Providers → Email에서 **공개 회원가입은 끕니다.** 관리자는 카카오로 로그인한 뒤, 해당 사용자만 `profiles.role` 을 `admin` 으로 올립니다. 다른 카카오 계정은 관리자 페이지에 들어갈 수 없습니다.
 

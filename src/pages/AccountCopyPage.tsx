@@ -67,16 +67,33 @@ export function AccountCopyPage() {
       setLoading(false)
       return
     }
+
+    let cancelled = false
     setLoading(true)
-    void supabase
-      .from('farms')
-      .select('slug, bank_name, account_number, account_holder, kakao_channel_url, phone, mobile_phone')
-      .eq('slug', farmSlug)
-      .maybeSingle()
-      .then(({ data }) => {
+
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('farms')
+          .select('slug, bank_name, account_number, account_holder, kakao_channel_url, phone, mobile_phone')
+          .eq('slug', farmSlug)
+          .maybeSingle()
+        if (cancelled) return
+        if (error) {
+          setFarm(null)
+          return
+        }
         setFarm((data as FarmQrInfo | null) ?? null)
-        setLoading(false)
-      })
+      } catch {
+        if (!cancelled) setFarm(null)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [farmSlug])
 
   useEffect(() => {
