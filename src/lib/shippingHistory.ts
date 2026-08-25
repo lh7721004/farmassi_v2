@@ -142,3 +142,46 @@ export async function autoCountFarmassi(year: number, month: number): Promise<Re
   }
   return byDate
 }
+
+/**
+ * 하루치를 한 번에 저장한다.
+ *
+ * 칸을 고칠 때마다 쓰지 않고 저장 버튼을 눌렀을 때 몰아서 쓴다. 중간 상태가
+ * DB 에 남지 않고, 사용자가 되돌리기 쉬워진다.
+ */
+export async function saveDay(
+  date: string,
+  day: HistoryDay,
+  farms: HistoryFarm[],
+  farmProducts: Record<string, { id: string; name: string }[]>,
+): Promise<string | null> {
+  const cellRows = farms.flatMap((farm) =>
+    CHANNELS.map((channel) => {
+      const cell = day.cells[farm.id]?.[channel] ?? emptyCell()
+      return {
+        entry_date: date, farm_id: farm.id, channel,
+        count: cell.count, receipt_text: cell.receiptText || null,
+      }
+    }),
+  )
+  const productRows = farms.flatMap((farm) => {
+    const qty = day.productQty[farm.id] ?? {}
+    const nameOf = new Map((farmProducts[farm.id] ?? []).map((p) => [p.id, p.name]))
+    return Object.entries(qty).map(([key, quantity]) => ({
+      entry_date: date, farm_id: farm.id,
+      // 화면 키는 상품 id 지만 저장은 이름으로 한다. 상품이 지워져도 이력이 남아야 한다.
+      product_name: nameOf.get(key) ?? key,
+      quantity,
+    }))
+  })
+
+  const cells = await supabase.from('shipping_history')
+    .upsert(cellRows, { onConflict: 'entry_date,farm_id,channel' })
+  if (cells.error) return cells.error.message
+  if (productRows.length > 0) {
+    const products = await supabase.from('shipping_history_products')
+      .upsert(productRows, { onConflict: 'entry_date,farm_id,product_name' })
+    if (products.error) return products.error.message
+  }
+  return null
+}
