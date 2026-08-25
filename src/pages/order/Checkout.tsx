@@ -11,6 +11,7 @@ import { PhoneField } from '../../components/ui/PhoneField'
 import { RequestMemoField } from '../../components/ui/RequestMemoField'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { ErrorText, PageSpinner } from '../../components/ui/Feedback'
+import { shippingFeeFor } from '../../lib/shippingFee'
 import { clearCart, getCart } from '../../lib/cart'
 import { formatPrice } from '../../lib/format'
 import { invokeFunction } from '../../lib/functions'
@@ -168,7 +169,12 @@ export function Checkout() {
       product,
       quantity: qtyById[product.id] ?? 0,
     }))
-  const total = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0)
+  const goodsTotal = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0)
+  // 배송비는 수량에 비례하지 않는다. 서버가 다시 계산하지만 손님이 주문 전에
+  // 얼마인지 알아야 하므로 화면에서도 같은 규칙으로 센다.
+  const shippingTotal = lines.reduce(
+    (sum, line) => sum + shippingFeeFor(line.product.shipping_fees, line.quantity), 0)
+  const total = goodsTotal + shippingTotal
   const volumeWarning = Boolean(
     farm &&
       isQtyVolumeExceeded({
@@ -261,7 +267,19 @@ export function Checkout() {
               </div>
             ))}
           </div>
-          <div className="mt-3 flex justify-between font-bold">
+          {shippingTotal > 0 && (
+            <div className="mt-3 space-y-1 border-t border-gray-100 pt-3 text-sm">
+              <div className="flex justify-between text-muted">
+                <span>상품 금액</span>
+                <span>{formatPrice(goodsTotal)}</span>
+              </div>
+              <div className="flex justify-between text-muted">
+                <span>배송비</span>
+                <span>{formatPrice(shippingTotal)}</span>
+              </div>
+            </div>
+          )}
+          <div className={`flex justify-between font-bold ${shippingTotal > 0 ? 'mt-2' : 'mt-3'}`}>
             <span>합계</span>
             <span className="text-primary">{formatPrice(total)}</span>
           </div>

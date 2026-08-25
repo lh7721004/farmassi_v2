@@ -104,6 +104,8 @@ export interface Product {
   price: number
   /** 할인 전 원래 가격. price 보다 클 때만 취소선으로 표시한다. */
   list_price: number | null
+  /** 수량 구간별 배송비 [{qty, fee}]. 빈 배열이면 상품가에 포함(0원). */
+  shipping_fees: { qty: number; fee: number }[]
   unit: string | null
   description: string | null
   image_url: string | null
