@@ -737,7 +737,7 @@ export function AdminShippingHistory() {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[880px] text-sm table-fixed">
+                <table className="w-full min-w-[880px] text-sm">
                   <colgroup>
                     <col className="w-36" />
                     {farms.flatMap((farm) => [
@@ -965,7 +965,7 @@ export function AdminShippingHistory() {
                           <td
                             key={farm.id}
                             colSpan={2}
-                            className="px-2 py-2.5 align-top"
+                            className="min-w-[13rem] px-2 py-2.5 align-top"
                           >
                             {target === 0 ? (
                               <span className="text-xs text-muted">
@@ -991,9 +991,14 @@ export function AdminShippingHistory() {
                                     return (
                                       <li
                                         key={product.id}
-                                        className="flex items-center gap-1.5 text-xs"
+                                        className="flex items-start gap-1.5 text-xs"
                                       >
-                                        <span className="min-w-0 flex-1 truncate text-gray-700">
+                                        {/*
+                                          긴 상품명을 잘라내면 무엇을 세는지 알 수 없다.
+                                          줄바꿈해서 전부 보여준다. break-words 는 공백이
+                                          없는 긴 낱말도 끊어 준다.
+                                        */}
+                                        <span className="min-w-0 flex-1 break-words leading-snug text-gray-700">
                                           {product.name}
                                         </span>
                                         {canEditProducts ? (
