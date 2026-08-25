@@ -26,10 +26,26 @@ export function normalizeDeliveryDays(value: unknown): number[] {
   return [...new Set(days)].sort((a, b) => a - b)
 }
 
-/** '월, 수, 금' — 설정이 없으면 빈 문자열. */
+/**
+ * '월, 수, 금' 처럼 요일을 늘어놓는다. 설정이 없으면 빈 문자열.
+ *
+ * 월~금을 모두 고른 경우는 '평일' 로 묶는다. '월, 화, 수, 목, 금' 은 길기만
+ * 하고 읽기 어렵다. 주말이 섞이면 '평일, 토' 처럼 붙인다.
+ */
 export function deliveryDaysLabel(days: number[]): string {
   const set = new Set(normalizeDeliveryDays(days))
-  return WEEKDAYS.filter((day) => set.has(day.value)).map((day) => day.label).join(', ')
+  if (set.size === 0) return ''
+
+  const WEEKDAY_VALUES = [1, 2, 3, 4, 5]
+  const allWeekdays = WEEKDAY_VALUES.every((v) => set.has(v))
+  if (!allWeekdays) {
+    return WEEKDAYS.filter((day) => set.has(day.value)).map((day) => day.label).join(', ')
+  }
+  // 평일 + 주말 조합. 토·일은 뒤에 붙인다.
+  const weekend = WEEKDAYS.filter((day) => (day.value === 6 || day.value === 0) && set.has(day.value))
+    .sort((a) => (a.value === 6 ? -1 : 1))
+    .map((day) => day.label)
+  return ['평일', ...weekend].join(', ')
 }
 
 /**
