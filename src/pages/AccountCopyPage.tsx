@@ -130,6 +130,8 @@ export function AccountCopyPage() {
             kakaoChannelUrl={farm.kakao_channel_url}
             phone={farm.phone}
             mobilePhone={farm.mobile_phone}
+            kakaoLabel="카카오톡 채널추가"
+            kakaoLink="profile"
           />
           <Link to={farmLandingPath(farm.slug)} className="block">
             <Button size="lg" fullWidth>
