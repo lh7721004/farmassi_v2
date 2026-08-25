@@ -25,6 +25,7 @@ export function Header({ title, subtitle, showBack, backTo, rightElement }: Head
       <div className="flex items-center gap-3 max-w-5xl mx-auto">
         {showBack && (
           <button
+            data-leave-guard
             type="button"
             onClick={handleBack}
             className="flex h-9 w-9 items-center justify-center rounded-xl hover:bg-gray-100 transition-colors shrink-0"

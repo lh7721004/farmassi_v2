@@ -4,6 +4,7 @@ import {
   type HistoryFarm,
 } from '../../lib/shippingHistory'
 import { isSundayYmd, shortHolidayName, useHolidays } from '../../lib/useHolidays'
+import { useUnsavedGuard } from '../../lib/useUnsavedGuard'
 import {
   Pencil,
   Check,
@@ -374,34 +375,8 @@ export function AdminShippingHistory() {
     return true
   }
 
-  // 저장하지 않은 값이 있으면 창을 닫을 때 브라우저가 물어보게 한다.
-  useEffect(() => {
-    if (dirtyDates.size === 0) return
-    const warn = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
-      e.returnValue = ''
-    }
-    window.addEventListener('beforeunload', warn)
-
-    // 뒤로가기는 beforeunload 가 잡지 못한다. 화면 안에서 주소만 바뀌기
-    // 때문이다. 히스토리에 한 칸을 더 넣어 두고, 뒤로가기가 오면 물어본 뒤
-    // 취소하면 그 자리로 되돌린다.
-    history.pushState(null, '', location.href)
-    const onPop = () => {
-      if (window.confirm('저장하지 않은 데이터가 있습니다. 페이지에서 나가시겠습니까?')) {
-        window.removeEventListener('popstate', onPop)
-        history.back()
-        return
-      }
-      history.pushState(null, '', location.href)
-    }
-    window.addEventListener('popstate', onPop)
-
-    return () => {
-      window.removeEventListener('beforeunload', warn)
-      window.removeEventListener('popstate', onPop)
-    }
-  }, [dirtyDates])
+  // 저장하지 않은 값이 있으면 떠나기 전에 물어본다.
+  useUnsavedGuard(dirtyDates.size > 0)
 
   function isEditable(date: string): boolean {
     return date === today || editingDates.has(date)
