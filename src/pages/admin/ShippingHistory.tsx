@@ -3,6 +3,7 @@ import {
   autoCountFarmassi, loadFarms, loadFarmProducts, loadMonth, saveCell, saveProductQty,
   type HistoryFarm,
 } from '../../lib/shippingHistory'
+import { isSundayYmd, shortHolidayName, useHolidays } from '../../lib/useHolidays'
 import {
   Pencil,
   Check,
@@ -265,6 +266,8 @@ export function AdminShippingHistory() {
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(() => new Set())
 
   const viewMonthKey = monthKey(viewYear, viewMonth)
+  // 달력에 공휴일을 빨갛게 보여준다. 배송 일시정지 달력과 같은 훅을 쓴다.
+  const holidays = useHolidays(viewYear, viewMonth)
   // loadError 는 아래 헤더 옆에 띄운다
 
   useEffect(() => {
@@ -529,11 +532,9 @@ export function AdminShippingHistory() {
               const record = daysByDate[date]
               const hasWork = record ? dayHasWork(record, farms) : false
               const isToday = date === today
-              const isSunday = new Date(
-                Number(date.slice(0, 4)),
-                Number(date.slice(5, 7)) - 1,
-                Number(date.slice(8)),
-              ).getDay() === 0
+              const holidayName = holidays[date]
+              // 공휴일과 일요일은 우체국이 쉬는 날이라 같은 색으로 묶는다.
+              const restDay = Boolean(holidayName) || isSundayYmd(date)
               const clickable = Boolean(record)
               return (
                 <button
@@ -541,18 +542,25 @@ export function AdminShippingHistory() {
                   type="button"
                   disabled={!clickable}
                   onClick={() => scrollToDay(date)}
+                  title={holidayName ?? undefined}
                   className={[
-                    'relative flex h-11 w-full flex-col items-center justify-center rounded-xl text-sm',
+                    'relative flex h-11 w-full flex-col items-center justify-center rounded-xl text-sm leading-none',
                     clickable ? 'hover:bg-primary-light/60' : 'cursor-default',
-                    isToday ? 'font-semibold text-primary' : isSunday ? 'text-red-600' : 'text-gray-800',
-                    !clickable && !isToday ? 'text-gray-300' : '',
+                    isToday ? 'font-semibold text-primary' : restDay ? 'text-red-600' : 'text-gray-800',
+                    !clickable && !isToday && !restDay ? 'text-gray-300' : '',
+                    !clickable && restDay && !isToday ? 'text-red-300' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
                 >
-                  {Number(date.slice(8))}
+                  <span>{Number(date.slice(8))}</span>
+                  {holidayName && (
+                    <span className="mt-0.5 max-w-full truncate text-[9px] font-normal">
+                      {shortHolidayName(holidayName)}
+                    </span>
+                  )}
                   {hasWork && (
-                    <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-primary" />
+                    <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary" />
                   )}
                 </button>
               )
