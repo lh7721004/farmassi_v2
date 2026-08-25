@@ -275,6 +275,17 @@ function ProductFormCard({
           </div>
         )}
       </div>
+      {/*
+        고르는 값이 우체국 요금 구간의 상한이라, 얼마가 나오는지 옆에 두지
+        않으면 무엇을 골라야 할지 알 수 없다. 요청받은 표를 그대로 둔다.
+      */}
+      <div className="rounded-xl bg-gray-50 px-3 py-2.5 text-xs leading-relaxed text-muted">
+        <p className="font-medium text-gray-700">우체국 요금 참고</p>
+        <p className="mt-1">
+          포도 · 3kg/100 4,500원 · 7kg/100 5,000원 · 15kg/120 7,000원 · 20kg/120 11,000원
+        </p>
+        <p>즙 · 1box 5,000원 · 2box 7,000원 · 3box 8,000원</p>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <Select
           label="택배 중량(kg)"
