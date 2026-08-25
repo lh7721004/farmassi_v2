@@ -43,23 +43,33 @@ export function ShippingScheduleNotice({
           <span className="font-semibold text-gray-900">예상 배송일정</span>
           <span className="ml-1.5 whitespace-nowrap font-semibold text-primary">{formatYmd(arrivalDate)}</span>
         </p>
-        {activePause ? (
+        {/*
+          정지 중이어도 출고 예정 줄은 그대로 보여준다. 정지가 끝나는 날을
+          알고 있으므로 언제 나갈지 계산이 되고, 손님이 알고 싶은 것도 그것이다.
+          사유는 그 위에 한 줄로 덧붙인다.
+        */}
+        {activePause && (
           <p className="mt-0.5 text-xs leading-snug text-amber-800">{pauseMessage(activePause)}</p>
-        ) : (
-          <p className="mt-0.5 text-xs leading-snug text-muted">
-            {label ? `${label} 출고` : '주문 다음날 출고'} · {formatYmd(shipDate!)} 출고 예정
-            <br />
-            {/*
-              마감 안내는 마감 때문에 실제로 출고가 밀렸을 때만 띄운다.
-              어차피 모레 나갈 농가에까지 '마감이 지났다' 고 하면 사실이 아니다.
-            */}
-            {missedCutoff
-              ? `오늘 ${CUTOFF_HOUR}시 주문마감으로 다음 출고일에 배송됩니다`
-              : shipsTomorrow
-                ? `${CUTOFF_HOUR}시 이전까지 결제 시 내일 출발`
-                : null}
-          </p>
         )}
+        <p className="mt-0.5 text-xs leading-snug text-muted">
+          {label ? `${label} 출고` : '주문 다음날 출고'} · {formatYmd(shipDate!)} 출고 예정
+          {/*
+            마감 안내는 마감 때문에 실제로 출고가 밀렸을 때만 띄운다.
+            어차피 모레 나갈 농가에까지 '마감이 지났다' 고 하면 사실이 아니다.
+            정지 중이면 마감과 무관하게 밀리므로 이 줄은 나오지 않는다.
+          */}
+          {missedCutoff ? (
+            <>
+              <br />
+              {`오늘 ${CUTOFF_HOUR}시 주문마감으로 다음 출고일에 배송됩니다`}
+            </>
+          ) : shipsTomorrow ? (
+            <>
+              <br />
+              {`${CUTOFF_HOUR}시 이전까지 결제 시 내일 출발`}
+            </>
+          ) : null}
+        </p>
         {volumeWarning && volumeWarningMessage ? (
           <p className="mt-0.5 text-xs leading-snug text-amber-800">{volumeWarningMessage}</p>
         ) : null}
