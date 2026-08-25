@@ -691,7 +691,12 @@ export function AdminShippingHistory() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {editable && (
+                  {/*
+                    과거 날짜를 수정 중일 때는 버튼이 하나면 된다. '수정 완료' 가
+                    저장까지 하므로 옆에 '저장' 을 따로 두면 무엇을 눌러야 하는지
+                    헷갈린다. 오늘은 잠금이 없어 '저장' 만 나온다.
+                  */}
+                  {editable && !isPast && (
                     <Button
                       size="sm"
                       variant={dirty ? 'primary' : 'outline'}
@@ -706,8 +711,9 @@ export function AdminShippingHistory() {
                   {isPast && (
                     <Button
                       size="sm"
-                      variant={editable ? 'secondary' : 'outline'}
+                      variant={editable ? (dirty ? 'primary' : 'outline') : 'outline'}
                       type="button"
+                      disabled={saving}
                       onClick={async () => {
                         // 잠그기 전에 저장한다. 안 그러면 고친 값이 그대로 날아간다.
                         if (editable && dirty && !(await saveDate(day.date))) return
@@ -717,7 +723,7 @@ export function AdminShippingHistory() {
                       {editable ? (
                         <>
                           <Check className="h-4 w-4" />
-                          수정 완료
+                          {saving ? '저장 중…' : '수정 완료'}
                         </>
                       ) : (
                         <>
