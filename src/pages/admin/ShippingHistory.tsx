@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import {
-  autoCountFarmassi, loadFarms, loadFarmProducts, loadMonth, saveCell, saveProductQty,
+  autoCountFarmassi, loadFarms, loadFarmProducts, loadMonth, saveDay,
   type HistoryFarm,
 } from '../../lib/shippingHistory'
 import { isSundayYmd, shortHolidayName, useHolidays } from '../../lib/useHolidays'
@@ -344,6 +344,44 @@ export function AdminShippingHistory() {
     return [...blanks, ...dates]
   }, [viewYear, viewMonth])
 
+  /** 아직 저장하지 않은 날짜 */
+  const [dirtyDates, setDirtyDates] = useState<Set<string>>(() => new Set())
+  const [savingDate, setSavingDate] = useState<string | null>(null)
+
+  function markDirty(date: string) {
+    setDirtyDates((prev) => (prev.has(date) ? prev : new Set(prev).add(date)))
+  }
+
+  async function saveDate(date: string): Promise<boolean> {
+    const day = days.find((d) => d.date === date)
+    if (!day) return false
+    setSavingDate(date)
+    setLoadError('')
+    const err = await saveDay(date, day, farms, farmProducts)
+    setSavingDate(null)
+    if (err) {
+      setLoadError(`저장하지 못했습니다: ${err}`)
+      return false
+    }
+    setDirtyDates((prev) => {
+      const next = new Set(prev)
+      next.delete(date)
+      return next
+    })
+    return true
+  }
+
+  // 저장하지 않은 값이 있으면 창을 닫을 때 브라우저가 물어보게 한다.
+  useEffect(() => {
+    if (dirtyDates.size === 0) return
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirtyDates])
+
   function isEditable(date: string): boolean {
     return date === today || editingDates.has(date)
   }
@@ -399,9 +437,7 @@ export function AdminShippingHistory() {
   }
 
   function updateCell(date: string, farmId: string, channel: Channel, next: FarmCell) {
-    void saveCell(date, farmId, channel, next).then((err) => {
-      if (err) setLoadError(`저장하지 못했습니다: ${err}`)
-    })
+    markDirty(date)
     setDays((prev) =>
       prev.map((day) => {
         if (day.date !== date) return day
@@ -426,8 +462,6 @@ export function AdminShippingHistory() {
   }
 
   function bumpProductQty(date: string, farmId: string, productId: string, delta: number) {
-    // productId 는 화면 키다. 저장은 이름으로 한다 — 상품이 지워져도 이력이 남아야 한다.
-    const name = (farmProducts[farmId] ?? []).find((p) => p.id === productId)?.name ?? productId
     setDays((prev) =>
       prev.map((day) => {
         if (day.date !== date) return day
@@ -438,9 +472,7 @@ export function AdminShippingHistory() {
         if (delta > 0 && allocated >= maxTotal) return day
         if (delta < 0 && value <= 0) return day
         current[productId] = Math.max(0, value + delta)
-        void saveProductQty(date, farmId, name, current[productId]).then((err) => {
-          if (err) setLoadError(`품목을 저장하지 못했습니다: ${err}`)
-        })
+        markDirty(date)
         return {
           ...day,
           productQty: {
@@ -585,6 +617,12 @@ export function AdminShippingHistory() {
         </div>
         {exportError && <p className="text-sm text-red-600">{exportError}</p>}
         {loadError && <p className="text-sm text-red-600">{loadError}</p>}
+        {dirtyDates.size > 0 && (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            저장하지 않은 데이터가 있습니다 ({[...dirtyDates].sort().join(', ')}).
+            각 날짜의 저장 버튼을 눌러 주세요.
+          </p>
+        )}
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {farmTotals.map(({ farm, total }) => (
@@ -624,6 +662,8 @@ export function AdminShippingHistory() {
           const farmassiOpen = isFarmassiEditable(day.date)
           const isToday = day.date === today
           const isPast = day.date < today
+          const dirty = dirtyDates.has(day.date)
+          const saving = savingDate === day.date
 
           return (
             <div key={day.date} id={`shipping-day-${day.date}`} className="scroll-mt-4">
@@ -642,6 +682,11 @@ export function AdminShippingHistory() {
                         수정 중
                       </span>
                     )}
+                    {dirty && (
+                      <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700">
+                        저장 안 됨
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-muted mt-0.5">
                     배송 가능 농원:{' '}
@@ -650,26 +695,44 @@ export function AdminShippingHistory() {
                       .join(', ') || '없음'}
                   </p>
                 </div>
-                {isPast && (
-                  <Button
-                    size="sm"
-                    variant={editable ? 'secondary' : 'outline'}
-                    type="button"
-                    onClick={() => toggleEdit(day.date)}
-                  >
-                    {editable ? (
-                      <>
-                        <Check className="h-4 w-4" />
-                        수정 완료
-                      </>
-                    ) : (
-                      <>
-                        <Pencil className="h-4 w-4" />
-                        수정
-                      </>
-                    )}
-                  </Button>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                  {editable && (
+                    <Button
+                      size="sm"
+                      variant={dirty ? 'primary' : 'outline'}
+                      type="button"
+                      disabled={!dirty || saving}
+                      onClick={() => void saveDate(day.date)}
+                    >
+                      <Check className="h-4 w-4" />
+                      {saving ? '저장 중…' : '저장'}
+                    </Button>
+                  )}
+                  {isPast && (
+                    <Button
+                      size="sm"
+                      variant={editable ? 'secondary' : 'outline'}
+                      type="button"
+                      onClick={async () => {
+                        // 잠그기 전에 저장한다. 안 그러면 고친 값이 그대로 날아간다.
+                        if (editable && dirty && !(await saveDate(day.date))) return
+                        toggleEdit(day.date)
+                      }}
+                    >
+                      {editable ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          수정 완료
+                        </>
+                      ) : (
+                        <>
+                          <Pencil className="h-4 w-4" />
+                          수정
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[880px] text-sm table-fixed">
