@@ -69,7 +69,13 @@ const monthRange = (year: number, month: number) => {
 }
 
 /** 그 달의 저장된 이력을 화면 자료구조로 읽어 온다. */
-export async function loadMonth(year: number, month: number, farms: HistoryFarm[]): Promise<HistoryDay[]> {
+export async function loadMonth(
+  year: number,
+  month: number,
+  farms: HistoryFarm[],
+  /** 저장은 상품 이름으로 한다. 화면 키는 상품 id 라 여기서 되돌린다. */
+  farmProducts: Record<string, { id: string; name: string }[]> = {},
+): Promise<HistoryDay[]> {
   const { from, to } = monthRange(year, month)
   const [cells, products] = await Promise.all([
     supabase.from('shipping_history').select('entry_date, farm_id, channel, count, receipt_text')
@@ -97,9 +103,15 @@ export async function loadMonth(year: number, month: number, farms: HistoryFarm[
     const farm = (day.cells[row.farm_id] ??= emptyFarmCells())
     farm[row.channel as Channel] = { count: row.count ?? 0, receiptText: row.receipt_text ?? '' }
   }
+  // 이름 → id 로 되돌린다. 지워진 상품이면 id 를 못 찾으므로 이름을 그대로 쓴다.
+  const idByName = new Map<string, Map<string, string>>()
+  for (const [farmId, list] of Object.entries(farmProducts)) {
+    idByName.set(farmId, new Map(list.map((p) => [p.name, p.id])))
+  }
   for (const row of (products.data ?? []) as any[]) {
     const day = ensure(row.entry_date)
-    ;(day.productQty[row.farm_id] ??= {})[row.product_name] = row.quantity ?? 0
+    const key = idByName.get(row.farm_id)?.get(row.product_name) ?? row.product_name
+    ;(day.productQty[row.farm_id] ??= {})[key] = row.quantity ?? 0
   }
   return [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date))
 }

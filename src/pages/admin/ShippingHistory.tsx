@@ -32,6 +32,8 @@ const CHANNELS = ['직접연락', '카톡 비즈니스', '팜어시'] as const
 type Channel = (typeof CHANNELS)[number]
 
 const AUTO_CHANNEL: Channel = '팜어시'
+/** 품목만 적었을 때 건수를 더할 채널. 수동으로 받은 주문이라 직접연락으로 본다. */
+const MANUAL_CHANNEL: Channel = '직접연락'
 
 interface FarmCell {
   count: number
@@ -293,7 +295,7 @@ export function AdminShippingHistory() {
     void (async () => {
       try {
         const [saved, auto] = await Promise.all([
-          loadMonth(viewYear, viewMonth, farms),
+          loadMonth(viewYear, viewMonth, farms, farmProducts),
           autoCountFarmassi(viewYear, viewMonth),
         ])
         if (!alive) return
@@ -318,7 +320,7 @@ export function AdminShippingHistory() {
       }
     })()
     return () => { alive = false }
-  }, [farms, viewYear, viewMonth, viewMonthKey])
+  }, [farms, farmProducts, viewYear, viewMonth, viewMonthKey])
 
   // 오늘이 속한 달로 맞춰 둔다 (월이 바뀌면 새 페이지)
   useEffect(() => {
@@ -465,20 +467,34 @@ export function AdminShippingHistory() {
     setDays((prev) =>
       prev.map((day) => {
         if (day.date !== date) return day
-        const maxTotal = farmDayTotal(day.cells[farmId])
         const current = { ...(day.productQty[farmId] ?? {}) }
         const allocated = productQtySum(current)
         const value = current[productId] ?? 0
-        if (delta > 0 && allocated >= maxTotal) return day
         if (delta < 0 && value <= 0) return day
         current[productId] = Math.max(0, value + delta)
         markDirty(date)
+
+        // 품목 합계가 송장 건수를 넘으면 건수를 따라 올린다. 수동으로 받은
+        // 주문은 품목부터 적게 되는데, 건수를 먼저 넣으라고 막으면 순서를
+        // 강요하게 된다. 넘친 만큼 '직접연락' 에 더한다.
+        let cells = day.cells
+        const nextAllocated = allocated + delta
+        const total = farmDayTotal(cells[farmId])
+        if (delta > 0 && nextAllocated > total) {
+          const base = cells[farmId] ?? emptyFarmCells()
+          const manual = base[MANUAL_CHANNEL] ?? emptyCell()
+          cells = {
+            ...cells,
+            [farmId]: {
+              ...base,
+              [MANUAL_CHANNEL]: { ...manual, count: manual.count + (nextAllocated - total) },
+            },
+          }
+        }
         return {
           ...day,
-          productQty: {
-            ...day.productQty,
-            [farmId]: clampFarmProductQty(current, maxTotal),
-          },
+          cells,
+          productQty: { ...day.productQty, [farmId]: current },
         }
       }),
     )
@@ -955,7 +971,9 @@ export function AdminShippingHistory() {
                             ? products
                             : products.slice(0, VISIBLE_PRODUCT_LIMIT)
                         const hiddenCount = products.length - VISIBLE_PRODUCT_LIMIT
-                        const canEditProducts = editable && target > 0
+                        // 수동 주문은 품목부터 적는 게 자연스럽다. 건수를 먼저
+                        // 넣으라고 막지 않는다 — 품목을 올리면 건수가 따라 오른다.
+                        const canEditProducts = editable
                         const matched = target > 0 && allocated === target
                         return (
                           <td
@@ -963,7 +981,7 @@ export function AdminShippingHistory() {
                             colSpan={2}
                             className="px-2 py-2.5 align-top"
                           >
-                            {target === 0 ? (
+                            {target === 0 && !canEditProducts ? (
                               <span className="text-xs text-muted">—</span>
                             ) : (
                               <div className="space-y-1.5">
@@ -973,8 +991,9 @@ export function AdminShippingHistory() {
                                     matched ? 'text-primary' : 'text-amber-700',
                                   ].join(' ')}
                                 >
-                                  {allocated}/{target}건
-                                  {!matched && remaining > 0 ? ` · ${remaining}건 남음` : ''}
+                                  {target === 0 && allocated === 0
+                                    ? '수동 주문은 여기서 바로 적을 수 있습니다'
+                                    : `${allocated}/${target}건${!matched && remaining > 0 ? ` · ${remaining}건 남음` : ''}`}
                                   {!matched && remaining === 0 && allocated > target
                                     ? ' · 초과'
                                     : ''}
@@ -1014,7 +1033,6 @@ export function AdminShippingHistory() {
                                             <button
                                               type="button"
                                               aria-label={`${product.name} 증가`}
-                                              disabled={remaining <= 0}
                                               onClick={() =>
                                                 bumpProductQty(
                                                   day.date,
