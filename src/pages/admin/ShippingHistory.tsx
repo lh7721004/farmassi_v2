@@ -307,6 +307,11 @@ export function AdminShippingHistory() {
           }
           byDate.set(date, day)
         }
+        // 오늘 카드는 저장된 값이 없어도 항상 있어야 한다. 바로 입력할 수
+        // 있어야 하기 때문이다. 이 달을 보고 있을 때만 만든다.
+        if (today.startsWith(viewMonthKey) && !byDate.has(today)) {
+          byDate.set(today, createEmptyDay(today, farms, farmProducts))
+        }
         setDays([...byDate.values()].sort((a, b) => b.date.localeCompare(a.date)))
       } catch (err) {
         if (alive) setLoadError(err instanceof Error ? err.message : '이력을 불러오지 못했습니다.')
@@ -314,14 +319,6 @@ export function AdminShippingHistory() {
     })()
     return () => { alive = false }
   }, [farms, viewYear, viewMonth, viewMonthKey])
-
-  // 당일 행이 없으면 빈 표로 자동 생성 (로컬만, 서버 저장 없음)
-  useEffect(() => {
-    setDays((prev) => {
-      if (prev.some((d) => d.date === today)) return prev
-      return [createEmptyDay(today, farms, farmProducts), ...prev].sort((a, b) => b.date.localeCompare(a.date))
-    })
-  }, [today])
 
   // 오늘이 속한 달로 맞춰 둔다 (월이 바뀌면 새 페이지)
   useEffect(() => {
