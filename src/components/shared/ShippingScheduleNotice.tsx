@@ -25,7 +25,8 @@ interface ShippingScheduleNoticeProps {
 export function ShippingScheduleNotice({
   farmId, farm, days, volumeWarning, volumeWarningMessage,
 }: ShippingScheduleNoticeProps) {
-  const { ready, activePause, shipDate, arrivalDate, missedCutoff } = useShippingSchedule(farmId ?? farm?.id, days)
+  const { ready, activePause, shipDate, arrivalDate, missedCutoff, shipsTomorrow } =
+    useShippingSchedule(farmId ?? farm?.id, days)
   if (!ready || !arrivalDate) return null
 
   const label = deliveryDaysLabel(days ?? [])
@@ -53,8 +54,10 @@ export function ShippingScheduleNotice({
               어차피 모레 나갈 농가에까지 '마감이 지났다' 고 하면 사실이 아니다.
             */}
             {missedCutoff
-              ? `오늘 ${CUTOFF_HOUR}시 주문 마감이 지나 다음 출고일에 배송됩니다`
-              : `${CUTOFF_HOUR}시 이전까지 주문하면 다음 출고일에 배송됩니다`}
+              ? `오늘 ${CUTOFF_HOUR}시 주문마감으로 다음 출고일에 배송됩니다`
+              : shipsTomorrow
+                ? `${CUTOFF_HOUR}시 이전까지 결제 시 내일 출발`
+                : null}
           </p>
         )}
         {volumeWarning && volumeWarningMessage ? (
