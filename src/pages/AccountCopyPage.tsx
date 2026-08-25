@@ -40,29 +40,51 @@ export function AccountCopyPage() {
   const [farm, setFarm] = useState<FarmQrInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const accountRef = useRef<HTMLParagraphElement>(null)
+  const accountWrapRef = useRef<HTMLDivElement>(null)
+  const accountMeasureRef = useRef<HTMLSpanElement>(null)
+  const accountTextRef = useRef<HTMLParagraphElement>(null)
   const bank = farm?.bank_name?.trim() ?? ''
   const account = farm?.account_number?.trim() ?? ''
   const accountForCopy = normalizeAccountNumber(account)
   const holder = farm?.account_holder?.trim() ?? ''
 
   useLayoutEffect(() => {
-    const el = accountRef.current
-    if (!el || !account) return
+    const wrap = accountWrapRef.current
+    const measure = accountMeasureRef.current
+    const text = accountTextRef.current
+    if (!wrap || !measure || !text || !account) return
 
     const fit = () => {
-      el.style.fontSize = ''
-      let size = parseFloat(getComputedStyle(el).fontSize)
-      const minPx = 14
-      while (el.scrollWidth > el.clientWidth && size > minPx) {
-        size -= 0.5
-        el.style.fontSize = `${size}px`
+      text.style.fontSize = ''
+      measure.style.fontSize = ''
+      const maxPx = parseFloat(getComputedStyle(text).fontSize)
+      const minPx = 12
+      const available = wrap.clientWidth
+      if (available <= 0) return
+
+      let lo = minPx
+      let hi = maxPx
+      let best = minPx
+      while (hi - lo > 0.25) {
+        const mid = (lo + hi) / 2
+        measure.style.fontSize = `${mid}px`
+        if (measure.scrollWidth <= available) {
+          best = mid
+          lo = mid
+        } else {
+          hi = mid
+        }
       }
+      text.style.fontSize = `${best}px`
+      measure.style.fontSize = `${best}px`
     }
 
     fit()
-    const ro = new ResizeObserver(fit)
-    ro.observe(el)
+    void document.fonts?.ready.then(fit)
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(fit)
+    })
+    ro.observe(wrap)
     return () => ro.disconnect()
   }, [account])
 
@@ -146,12 +168,21 @@ export function AccountCopyPage() {
         <section className="space-y-4 rounded-2xl border border-primary/20 bg-white p-5 text-center shadow-sm">
           <div className="space-y-2">
             {bank ? <p className="text-xl font-semibold text-gray-900">{bank}</p> : null}
-            <p
-              ref={accountRef}
-              className="w-full whitespace-nowrap text-3xl font-bold tracking-wide text-gray-900 select-all"
-            >
-              {account}
-            </p>
+            <div ref={accountWrapRef} className="relative min-w-0 w-full overflow-hidden">
+              <span
+                ref={accountMeasureRef}
+                className="pointer-events-none invisible absolute left-0 top-0 whitespace-nowrap text-3xl font-bold tracking-wide"
+                aria-hidden
+              >
+                {account}
+              </span>
+              <p
+                ref={accountTextRef}
+                className="w-full overflow-hidden whitespace-nowrap text-3xl font-bold tracking-wide text-gray-900 select-all"
+              >
+                {account}
+              </p>
+            </div>
             {holder ? <p className="text-lg text-muted">예금주 {holder}</p> : null}
           </div>
           <p className={`text-sm ${copied ? 'font-medium text-primary' : 'text-muted'}`}>{hint}</p>
