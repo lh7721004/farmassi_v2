@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import {
-  arrivalDate, pauseCovering, shipDate, todayInSeoul, type PauseRange,
+  arrivalDate, isAfterCutoff, pauseCovering, shipDate, todayInSeoul, type PauseRange,
 } from './deliveryEstimate'
 
 /**
@@ -35,7 +35,12 @@ export function useShippingSchedule(farmId: string | null | undefined, days: num
 
   const today = todayInSeoul()
   const ship = shipDate(days ?? [], pauses, today, holidays)
+  // 마감이 없었다면 언제 나갔을까. 이것과 실제 출고일이 다르면 마감 때문에
+  // 밀린 것이고, 그때만 마감 안내를 띄운다.
+  const shipIfInTime = shipDate(days ?? [], pauses, today, holidays, false)
   return {
+    /** 마감 때문에 출고가 밀렸나 (= 원래는 더 이른 날 나갈 수 있었나) */
+    missedCutoff: isAfterCutoff() && Boolean(shipIfInTime) && shipIfInTime !== ship,
     ready,
     pauses,
     /** 오늘 정지 중인가 (주문은 받되 안내를 띄운다) */

@@ -1,7 +1,7 @@
 import { Truck } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { deliveryDaysLabel } from '../../lib/deliveryDays'
-import { CUTOFF_HOUR, formatYmd, isAfterCutoff, pauseMessage } from '../../lib/deliveryEstimate'
+import { CUTOFF_HOUR, formatYmd, pauseMessage } from '../../lib/deliveryEstimate'
 import { useShippingSchedule } from '../../lib/useShippingSchedule'
 
 interface ShippingScheduleNoticeProps {
@@ -25,7 +25,7 @@ interface ShippingScheduleNoticeProps {
 export function ShippingScheduleNotice({
   farmId, farm, days, volumeWarning, volumeWarningMessage,
 }: ShippingScheduleNoticeProps) {
-  const { ready, activePause, shipDate, arrivalDate } = useShippingSchedule(farmId ?? farm?.id, days)
+  const { ready, activePause, shipDate, arrivalDate, missedCutoff } = useShippingSchedule(farmId ?? farm?.id, days)
   if (!ready || !arrivalDate) return null
 
   const label = deliveryDaysLabel(days ?? [])
@@ -48,9 +48,13 @@ export function ShippingScheduleNotice({
           <p className="mt-0.5 text-xs leading-snug text-muted">
             {label ? `${label} 출고` : '주문 다음날 출고'} · {formatYmd(shipDate!)} 출고 예정
             <br />
-            {isAfterCutoff()
-              ? `오늘 ${CUTOFF_HOUR}시 주문 마감이 지나 다음 출고일부터 잡힙니다`
-              : `${CUTOFF_HOUR}시 이전까지 주문하면 다음 출고일에 나갑니다`}
+            {/*
+              마감 안내는 마감 때문에 실제로 출고가 밀렸을 때만 띄운다.
+              어차피 모레 나갈 농가에까지 '마감이 지났다' 고 하면 사실이 아니다.
+            */}
+            {missedCutoff
+              ? `오늘 ${CUTOFF_HOUR}시 주문 마감이 지나 다음 출고일에 배송됩니다`
+              : `${CUTOFF_HOUR}시 이전까지 주문하면 다음 출고일에 배송됩니다`}
           </p>
         )}
         {volumeWarning && volumeWarningMessage ? (
