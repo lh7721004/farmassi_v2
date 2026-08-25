@@ -35,12 +35,22 @@ export function useShippingSchedule(farmId: string | null | undefined, days: num
 
   const today = todayInSeoul()
   const ship = shipDate(days ?? [], pauses, today, holidays)
-  // 마감이 없었다면 언제 나갔을까. 이것과 실제 출고일이 다르면 마감 때문에
-  // 밀린 것이고, 그때만 마감 안내를 띄운다.
+  // 마감 안내는 '내일이 출고일일 때만' 띄운다. 마감 전이라면 내일 나가는 경우,
+  // 마감 후라면 마감만 아니었으면 내일 나갔을 경우다. 어차피 모레 이후에나
+  // 나가는 농가에는 마감 이야기를 할 이유가 없다.
   const shipIfInTime = shipDate(days ?? [], pauses, today, holidays, false)
+  const tomorrow = (() => {
+    const [y, m, d] = today.split('-').map(Number)
+    const next = new Date(y, m - 1, d + 1)
+    const pad = (n: number) => `${n}`.padStart(2, '0')
+    return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`
+  })()
+  const afterCutoff = isAfterCutoff()
   return {
-    /** 마감 때문에 출고가 밀렸나 (= 원래는 더 이른 날 나갈 수 있었나) */
-    missedCutoff: isAfterCutoff() && Boolean(shipIfInTime) && shipIfInTime !== ship,
+    /** 마감을 넘겨 출고가 밀렸나 (= 마감만 아니었으면 내일 나갔나) */
+    missedCutoff: afterCutoff && shipIfInTime === tomorrow,
+    /** 마감 전이고 내일 나가나 */
+    shipsTomorrow: !afterCutoff && ship === tomorrow,
     ready,
     pauses,
     /** 오늘 정지 중인가 (주문은 받되 안내를 띄운다) */
