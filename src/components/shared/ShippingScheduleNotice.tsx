@@ -1,7 +1,7 @@
 import { Truck } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { deliveryDaysLabel } from '../../lib/deliveryDays'
-import { formatYmd, pauseMessage } from '../../lib/deliveryEstimate'
+import { CUTOFF_HOUR, formatYmd, isAfterCutoff, pauseMessage } from '../../lib/deliveryEstimate'
 import { useShippingSchedule } from '../../lib/useShippingSchedule'
 
 interface ShippingScheduleNoticeProps {
@@ -46,7 +46,11 @@ export function ShippingScheduleNotice({
           <p className="mt-0.5 text-xs leading-snug text-amber-800">{pauseMessage(activePause)}</p>
         ) : (
           <p className="mt-0.5 text-xs leading-snug text-muted">
-            {label ? `${label}요일 출고` : '주문 다음날 출고'} · {formatYmd(shipDate!)} 출고 예정
+            {label ? `${label} 출고` : '주문 다음날 출고'} · {formatYmd(shipDate!)} 출고 예정
+            <br />
+            {isAfterCutoff()
+              ? `오늘 ${CUTOFF_HOUR}시 주문 마감이 지나 다음 출고일부터 잡힙니다`
+              : `${CUTOFF_HOUR}시 이전까지 주문하면 다음 출고일에 나갑니다`}
           </p>
         )}
         {volumeWarning && volumeWarningMessage ? (
