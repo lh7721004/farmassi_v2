@@ -22,7 +22,7 @@ import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { adminNavItems } from '../../config/adminNav'
 import { todayInSeoul } from '../../lib/deliveryEstimate'
-import { WEEKDAYS, deliveryDaysLabel } from '../../lib/deliveryDays'
+import { WEEKDAYS, deliveryDaysLabel, writeDaysLabel } from '../../lib/deliveryDays'
 import { formatPrice } from '../../lib/format'
 
 /** 송장 대행 1건당 수익 (원) */
@@ -135,12 +135,19 @@ function formatDisplayDate(iso: string): string {
   return `${y}.${m}.${d}. (${weekday})`
 }
 
-function farmCanShipOn(farm: HistoryFarm, iso: string): boolean {
+/**
+ * 이 날짜에 이 농가의 이력을 적을 수 있는가.
+ *
+ * 이력은 물건이 나가기 전날 적는다. 그래서 그날이 배송 요일인지가 아니라
+ * '다음날' 이 배송 요일인지를 본다. 월·수·금 배송이면 일·화·목에 적는다.
+ */
+function farmWritableOn(farm: HistoryFarm, iso: string): boolean {
   // 배송 요일을 정하지 않은 농가는 제한이 없는 것으로 본다. 빈 배열을
   // '아무 요일도 안 됨' 으로 읽으면 그 농가는 이력을 아예 적을 수 없다.
   if (farm.deliveryDays.length === 0) return true
   const [y, m, d] = iso.split('-').map(Number)
-  return farm.deliveryDays.includes(new Date(y, m - 1, d).getDay())
+  const nextDay = new Date(y, m - 1, d + 1).getDay()
+  return farm.deliveryDays.includes(nextDay)
 }
 
 function monthKey(year: number, month: number): string {
@@ -627,6 +634,11 @@ export function AdminShippingHistory() {
               <p className="text-xs text-muted">
                 배송요일 {deliveryDaysLabel(farm.deliveryDays) || '미설정'}
               </p>
+              {farm.deliveryDays.length > 0 && (
+                <p className="text-xs text-muted">
+                  작성요일 {writeDaysLabel(farm.deliveryDays)}
+                </p>
+              )}
               <p className="text-sm font-semibold text-primary">
                 {formatPrice(total * FEE_PER_SHIPMENT)}
               </p>
@@ -684,8 +696,8 @@ export function AdminShippingHistory() {
                     )}
                   </div>
                   <p className="text-xs text-muted mt-0.5">
-                    배송 가능 농원:{' '}
-                    {farms.filter((f) => farmCanShipOn(f, day.date))
+                    작성 가능 농원:{' '}
+                    {farms.filter((f) => farmWritableOn(f, day.date))
                       .map((f) => f.name)
                       .join(', ') || '없음'}
                   </p>
@@ -749,20 +761,20 @@ export function AdminShippingHistory() {
                     <tr className="bg-gray-50 text-left text-muted">
                       <th className="px-3 py-2 font-medium">채널</th>
                       {farms.map((farm) => {
-                        const canShip = farmCanShipOn(farm, day.date)
+                        const canWrite = farmWritableOn(farm, day.date)
                         const offOpen = isOffDayUnlocked(day.date, farm.id)
                         return (
                           <th key={farm.id} className="px-3 py-2 font-medium align-top" colSpan={2}>
                             <div className="flex flex-col gap-1">
                               <span>
                                 {farm.name}
-                                {!canShip && (
+                                {!canWrite && (
                                   <span className="ml-1 text-xs font-normal text-amber-700">
-                                    (요일 외)
+                                    (작성일 외)
                                   </span>
                                 )}
                               </span>
-                              {!canShip && editable && !offOpen && (
+                              {!canWrite && editable && !offOpen && (
                                 <button
                                   type="button"
                                   className="w-fit text-left text-xs font-normal text-primary hover:underline"
@@ -777,7 +789,7 @@ export function AdminShippingHistory() {
                                   수동 수정…
                                 </button>
                               )}
-                              {!canShip && offOpen && (
+                              {!canWrite && offOpen && (
                                 <button
                                   type="button"
                                   className="w-fit text-left text-xs font-normal text-muted hover:underline"
@@ -860,9 +872,9 @@ export function AdminShippingHistory() {
                           </td>
                           {farms.map((farm) => {
                             const cell = day.cells[farm.id]?.[channel] ?? emptyCell()
-                            const canShip = farmCanShipOn(farm, day.date)
+                            const canWrite = farmWritableOn(farm, day.date)
                             const offOpen = isOffDayUnlocked(day.date, farm.id)
-                            const farmOpen = canShip || offOpen
+                            const farmOpen = canWrite || offOpen
                             const cellEditable =
                               farmOpen && (isAuto ? farmassiOpen : editable)
                             const muted = !farmOpen ? 'bg-gray-50/80' : ''
@@ -1105,11 +1117,11 @@ export function AdminShippingHistory() {
 
       <ConfirmDialog
         open={offDayUnlockTarget !== null}
-        title="배송 요일이 아닌 농원을 수정할까요?"
+        title="작성일이 아닌 농원을 수정할까요?"
         description={
           <>
-            {offDayUnlockTarget?.farmName}은(는) 이날 배송 가능 요일이 아닙니다. 예외적으로
-            입력하면 일정과 어긋날 수 있습니다. 꼭 필요할 때만 수정하세요.
+            {offDayUnlockTarget?.farmName}은(는) 이날 작성일이 아닙니다 (배송 전날에 적습니다).
+            예외적으로 입력하면 일정과 어긋날 수 있습니다. 꼭 필요할 때만 수정하세요.
           </>
         }
         confirmLabel="그래도 수정"
