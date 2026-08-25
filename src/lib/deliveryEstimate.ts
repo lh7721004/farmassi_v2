@@ -19,6 +19,24 @@ export interface PauseRange {
 
 const DAY = 86400000
 
+/**
+ * 주문 마감 시각(서울 기준).
+ *
+ * 이 시각을 넘겨 주문하면 그날 접수분에 못 들어가므로 출고가 하루 더 밀린다.
+ * 우체국 창구 접수를 사람이 하기 때문에 생기는 제약이다.
+ */
+export const CUTOFF_HOUR = 17
+
+/** 지금이 마감을 넘겼나. 서울 시각으로 본다. */
+export function isAfterCutoff(now = new Date()): boolean {
+  const hour = Number(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Seoul', hour: '2-digit', hour12: false,
+    }).format(now),
+  )
+  return hour >= CUTOFF_HOUR
+}
+
 export function todayInSeoul(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
 }
@@ -45,15 +63,18 @@ export function pauseCovering(pauses: PauseRange[], ymd: string): PauseRange | n
  * 내일부터 시작해서, 정지 기간이면 그 다음날로 밀고, 배송 요일이 정해져
  * 있으면 그 요일이 될 때까지 민다. 정지 구간이 이어 붙어 있으면 계속 밀리므로
  * 넉넉히 돌되 무한루프는 막는다.
+ *
+ * 마감(17시)을 넘겼으면 하루 더 뒤부터 본다. 그날 접수분에 못 들어가기 때문이다.
  */
 export function shipDate(
   days: number[],
   pauses: PauseRange[] = [],
   from = todayInSeoul(),
   holidays: Set<string> = new Set(),
+  afterCutoff = isAfterCutoff(),
 ): string | null {
   const allowed = new Set(normalizeDeliveryDays(days))
-  let cursor = new Date(toDate(from).getTime() + DAY)
+  let cursor = new Date(toDate(from).getTime() + DAY * (afterCutoff ? 2 : 1))
 
   for (let i = 0; i < 400; i += 1) {
     const ymd = toYmd(cursor)
