@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Check, Copy, Package } from 'lucide-react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { FarmInquiryButtons } from '../components/shared/KakaoChannelButton'
@@ -40,10 +40,31 @@ export function AccountCopyPage() {
   const [farm, setFarm] = useState<FarmQrInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const accountRef = useRef<HTMLParagraphElement>(null)
   const bank = farm?.bank_name?.trim() ?? ''
   const account = farm?.account_number?.trim() ?? ''
   const accountForCopy = normalizeAccountNumber(account)
   const holder = farm?.account_holder?.trim() ?? ''
+
+  useLayoutEffect(() => {
+    const el = accountRef.current
+    if (!el || !account) return
+
+    const fit = () => {
+      el.style.fontSize = ''
+      let size = parseFloat(getComputedStyle(el).fontSize)
+      const minPx = 14
+      while (el.scrollWidth > el.clientWidth && size > minPx) {
+        size -= 0.5
+        el.style.fontSize = `${size}px`
+      }
+    }
+
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [account])
 
   async function copy(source: 'auto' | 'tap') {
     if (!accountForCopy) return
@@ -125,7 +146,12 @@ export function AccountCopyPage() {
         <section className="space-y-4 rounded-2xl border border-primary/20 bg-white p-5 text-center shadow-sm">
           <div className="space-y-2">
             {bank ? <p className="text-xl font-semibold text-gray-900">{bank}</p> : null}
-            <p className="break-all text-3xl font-bold tracking-wide text-gray-900 select-all">{account}</p>
+            <p
+              ref={accountRef}
+              className="w-full whitespace-nowrap text-3xl font-bold tracking-wide text-gray-900 select-all"
+            >
+              {account}
+            </p>
             {holder ? <p className="text-lg text-muted">예금주 {holder}</p> : null}
           </div>
           <p className={`text-sm ${copied ? 'font-medium text-primary' : 'text-muted'}`}>{hint}</p>
