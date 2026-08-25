@@ -41,13 +41,6 @@ interface FarmCell {
   receiptText: string
 }
 
-interface DummyFarm {
-  id: string
-  name: string
-  /** 배송 가능 요일 (0=일 … 6=토) — UI 표시용 더미 */
-  deliveryDays: number[]
-}
-
 interface DayRecord {
   date: string
   cells: Record<string, Record<Channel, FarmCell>>
@@ -143,7 +136,10 @@ function formatDisplayDate(iso: string): string {
   return `${y}.${m}.${d}. (${weekday})`
 }
 
-function farmCanShipOn(farm: DummyFarm, iso: string): boolean {
+function farmCanShipOn(farm: HistoryFarm, iso: string): boolean {
+  // 배송 요일을 정하지 않은 농가는 제한이 없는 것으로 본다. 빈 배열을
+  // '아무 요일도 안 됨' 으로 읽으면 그 농가는 이력을 아예 적을 수 없다.
+  if (farm.deliveryDays.length === 0) return true
   const [y, m, d] = iso.split('-').map(Number)
   return farm.deliveryDays.includes(new Date(y, m - 1, d).getDay())
 }

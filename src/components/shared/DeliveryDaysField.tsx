@@ -23,7 +23,7 @@ export function DeliveryDaysField({ value, onChange }: DeliveryDaysFieldProps) {
   }
 
   return (
-    <Field label="배송 가능 요일">
+    <Field label="배송 가능 요일 *">
       <div className="mt-1 flex flex-wrap gap-1.5">
         {WEEKDAYS.map((day) => {
           const on = selected.has(day.value)
@@ -44,10 +44,10 @@ export function DeliveryDaysField({ value, onChange }: DeliveryDaysFieldProps) {
           )
         })}
       </div>
-      <p className="mt-1.5 text-xs text-muted">
+      <p className={`mt-1.5 text-xs ${selected.size === 0 ? 'text-red-600' : 'text-muted'}`}>
         {selected.size === 0
-          ? '고르지 않으면 주문 페이지에 예상 배송일을 표시하지 않습니다.'
-          : '주문 페이지에 가장 가까운 배송일이 표시됩니다.'}
+          ? '하나 이상 골라 주세요. 예상 배송일 계산에 쓰입니다.'
+          : '주문 페이지에 예상 배송일이 표시됩니다.'}
       </p>
     </Field>
   )

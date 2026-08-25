@@ -190,6 +190,11 @@ export function AdminFarms() {
       setError('입금 계좌 정보를 모두 입력하세요.')
       return
     }
+    // 예상 배송일 계산에 쓰이므로 하나는 있어야 한다.
+    if (normalizeDeliveryDays(form.delivery_days).length === 0) {
+      setError('배송 가능 요일을 하나 이상 선택하세요.')
+      return
+    }
     setPending(true)
     const slug = uniqueSlug(form.slug.trim() || form.name, takenSlugs)
     const { data: farm, error: farmError } = await supabase
@@ -590,6 +595,10 @@ export function AdminFarms() {
                       const slug = toSlug(editing.slug) || farm.slug
                       if (RESERVED_SLUGS.has(slug) && slug !== farm.slug) {
                         setError('이 주문 페이지 주소는 사용할 수 없습니다.')
+                        return
+                      }
+                      if (normalizeDeliveryDays(editing.delivery_days).length === 0) {
+                        setError('배송 가능 요일을 하나 이상 선택하세요.')
                         return
                       }
                       setPending(true)
