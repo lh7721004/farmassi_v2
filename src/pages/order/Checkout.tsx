@@ -43,6 +43,8 @@ export function Checkout() {
   const [loading, setLoading] = useState(true)
   const [todayQty, setTodayQty] = useState<TodayQty>(emptyTodayQty())
   const [volumeDialogOpen, setVolumeDialogOpen] = useState(false)
+  /** 손님이 고른 출고일. null 이면 가장 빠른 날. */
+  const [chosenShipDate, setChosenShipDate] = useState<string | null>(null)
   const [form, setForm] = useState({
     recipient_name: '',
     phone: '',
@@ -211,6 +213,8 @@ export function Checkout() {
           addressDetail: form.address_detail,
         },
         requestMemo: form.request_memo,
+        // 고르지 않았으면 보내지 않는다. 서버가 가장 이른 출고일로 둔다.
+        requestedShipDate: chosenShipDate,
         saveAddress: alreadySavedAddress(addresses, form) ? false : selectedAddressId === 'new' && saveAddress,
       })
       clearCart(farmSlug)
@@ -479,6 +483,8 @@ export function Checkout() {
             farmId={farm.id}
             volumeWarning={volumeWarning}
             volumeWarningMessage={QTY_VOLUME_WARNING}
+            chosenShipDate={chosenShipDate}
+            onChangeShipDate={setChosenShipDate}
           />
 
         <Card className="bg-primary-light border-primary/20">
