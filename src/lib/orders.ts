@@ -64,5 +64,14 @@ export function toOrderListModel(order: OrderRow): OrderListModel {
     memo: order.request_memo,
     orderNo: order.order_no,
     trackingNumber: order.shipments?.[0]?.tracking_number,
+    senderName: order.sender_name,
+    senderPhone: order.sender_phone,
+    senderAddress: order.sender_address,
+    depositorName: order.depositor_name,
+    // 배송비는 total_amount 에 이미 들어 있다. 빼서 상품 합계를 만든다.
+    shippingFee: order.shipping_fee ?? 0,
+    itemsAmount: order.total_amount - (order.shipping_fee ?? 0),
+    depositDueAmount: order.deposit_due_amount,
+    depositCode: order.deposit_code,
   }
 }
