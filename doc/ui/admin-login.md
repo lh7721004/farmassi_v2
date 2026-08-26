@@ -7,6 +7,8 @@
 `localStorage` 의 `farmassi-token` 에 직접 서명한 토큰을 넣거나
 [dev-login](../backend/auth/command/dev-login.md) 을 쓴다.
 
----
+## 관련 파일
 
-구현: `src/pages/auth/AdminLogin.tsx` · 경로: `/admin/login`
+- [`src/pages/auth/AdminLogin.tsx`](../../src/pages/auth/AdminLogin.tsx)
+- [`src/lib/auth.tsx`](../../src/lib/auth.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

@@ -11,4 +11,6 @@
 주의: 포털이 주는 키는 이미 URL 인코딩돼 있다. httpx 가 `%` 를 한 번 더
 인코딩하면 403 이 난다. `unquote()` 로 풀어서 넣는다.
 
-구현: `server-py/app/scheduler.py`
+## 관련 파일
+
+- [`server-py/app/scheduler.py`](../../../../server-py/app/scheduler.py)

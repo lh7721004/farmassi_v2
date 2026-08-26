@@ -48,3 +48,13 @@
 | 정책 | 대상 | 조건 |
 |---|---|---|
 | `order_items_select` | SELECT | `(EXISTS ( SELECT 1    FROM orders o   WHERE ((o.id = order_items.order_id) AND ((o.customer_id = auth.uid()) OR private.is_admin() OR private.is_farm_member(o.farm_id)))))` |
+
+## 정의
+
+- [`supabase/migrations/20260817000001_init_farmassi.sql`](../../supabase/migrations/20260817000001_init_farmassi.sql)
+- [`supabase/migrations/20260817000002_fk_indexes.sql`](../../supabase/migrations/20260817000002_fk_indexes.sql)
+- [`supabase/migrations/20260826000000_shipping_fees.sql`](../../supabase/migrations/20260826000000_shipping_fees.sql)
+
+## 쓰는 곳
+
+- [`server-py/app/functions/create_order.py`](../../server-py/app/functions/create_order.py)

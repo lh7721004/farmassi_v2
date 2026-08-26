@@ -6,6 +6,8 @@
 
 **환경별 Redirect URI 가 맞아야 한다.** 개발 서버가 `www.farmassi.kr` 로 튄 적이 있다.
 
----
+## 관련 파일
 
-구현: `src/pages/auth/AuthCallback.tsx` · 경로: `/auth/callback`
+- [`src/pages/auth/AuthCallback.tsx`](../../src/pages/auth/AuthCallback.tsx)
+- [`src/lib/auth.tsx`](../../src/lib/auth.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

@@ -9,6 +9,9 @@
 
 관련: [shipping_pauses](../database/shipping_pauses.md)
 
----
+## 관련 파일
 
-구현: `src/pages/farm/Delivery.tsx` · 경로: `/admin/farms/:farmId/delivery`
+- [`src/pages/farm/Delivery.tsx`](../../src/pages/farm/Delivery.tsx)
+- [`src/components/shared/ShippingPausePanel.tsx`](../../src/components/shared/ShippingPausePanel.tsx)
+- [`src/lib/deliveryDays.ts`](../../src/lib/deliveryDays.ts)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

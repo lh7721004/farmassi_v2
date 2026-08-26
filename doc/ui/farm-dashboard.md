@@ -2,6 +2,7 @@
 
 그 농가의 오늘 주문과 요약.
 
----
+## 관련 파일
 
-구현: `src/pages/farm/Dashboard.tsx` · 경로: `/admin/farms/:farmId`
+- [`src/pages/farm/Dashboard.tsx`](../../src/pages/farm/Dashboard.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

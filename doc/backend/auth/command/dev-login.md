@@ -6,4 +6,6 @@
 카카오 로그인은 브라우저를 거쳐야 해서 자동 검증에 쓰기 어렵다. 헤드리스로
 관리자 화면을 확인할 때 이 발급구나 직접 서명한 토큰을 쓴다.
 
-구현: `server-py/app/main.py`
+## 관련 파일
+
+- [`server-py/app/main.py`](../../../../server-py/app/main.py)

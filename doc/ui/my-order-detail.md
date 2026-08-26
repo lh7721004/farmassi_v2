@@ -5,6 +5,7 @@
 품목 이름과 가격은 [order_items](../database/order_items.md) 에 값으로 남아 있어서,
 상품이 바뀌어도 주문 당시 내용이 그대로 보인다.
 
----
+## 관련 파일
 
-구현: `src/pages/me/MyOrderDetail.tsx` · 경로: `/me/orders/:orderId`
+- [`src/pages/me/MyOrderDetail.tsx`](../../src/pages/me/MyOrderDetail.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

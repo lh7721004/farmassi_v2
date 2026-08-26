@@ -7,4 +7,7 @@
 
 가맹점 비밀번호는 공개 테이블에 두지 않고 `private` 스키마에 보관한다.
 
-구현: `server-py/app/functions/bankda_ott.py`, `server-py/app/shared/bankda.py`
+## 관련 파일
+
+- [`server-py/app/functions/bankda_ott.py`](../../../../server-py/app/functions/bankda_ott.py)
+- [`server-py/app/shared/bankda.py`](../../../../server-py/app/shared/bankda.py)

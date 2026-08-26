@@ -46,3 +46,13 @@
 |---|---|---|
 | `notifications_select_own` | SELECT | `((user_id = auth.uid()) OR private.is_admin())` |
 | `notifications_update_own` | UPDATE | `(user_id = auth.uid())` |
+
+## 정의
+
+- [`supabase/migrations/20260817000001_init_farmassi.sql`](../../supabase/migrations/20260817000001_init_farmassi.sql)
+- [`supabase/migrations/20260817000002_fk_indexes.sql`](../../supabase/migrations/20260817000002_fk_indexes.sql)
+
+## 쓰는 곳
+
+- [`server-py/app/shared/push.py`](../../server-py/app/shared/push.py)
+- [`src/components/notifications/NotificationBell.tsx`](../../src/components/notifications/NotificationBell.tsx)

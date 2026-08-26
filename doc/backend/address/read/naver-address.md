@@ -16,4 +16,6 @@
 그러면 키가 잘못된 건지 카카오에서 서비스가 꺼진 건지 화면에서 알 수가 없다.
 지금은 카카오가 준 사유를 읽어 구분해 돌려준다.
 
-구현: `server-py/app/functions/naver_address.py`
+## 관련 파일
+
+- [`server-py/app/functions/naver_address.py`](../../../../server-py/app/functions/naver_address.py)

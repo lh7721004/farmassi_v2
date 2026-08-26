@@ -12,4 +12,7 @@ jsonb 컬럼은 그걸 받지 못하고 `invalid input syntax for type json` 을
 원하고 예전 Node 드라이버는 JS `Date` 를 주던 자리라, 문자열로 못 박아 두는
 편이 헷갈리지 않는다.
 
-구현: `server-py/app/query.py`, `server-py/app/schema.py`
+## 관련 파일
+
+- [`server-py/app/query.py`](../../../../server-py/app/query.py)
+- [`server-py/app/schema.py`](../../../../server-py/app/schema.py)

@@ -7,6 +7,8 @@
 **요청 대기 중** — 주문자가 적은 모든 정보를 이 화면에서 볼 수 있게 해 달라는
 요청이 있다(2026-08-26).
 
----
+## 관련 파일
 
-구현: `src/pages/admin/Orders.tsx` · 경로: `/admin/orders`
+- [`src/pages/admin/Orders.tsx`](../../src/pages/admin/Orders.tsx)
+- [`src/lib/orderStatus.ts`](../../src/lib/orderStatus.ts)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

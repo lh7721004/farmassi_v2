@@ -50,3 +50,11 @@
 | 정책 | 대상 | 조건 |
 |---|---|---|
 | `shipping_history_admin` | ALL | `private.is_admin()` |
+
+## 정의
+
+- [`supabase/migrations/20260825000002_shipping_history.sql`](../../supabase/migrations/20260825000002_shipping_history.sql)
+
+## 쓰는 곳
+
+- [`src/lib/shippingHistory.ts`](../../src/lib/shippingHistory.ts)

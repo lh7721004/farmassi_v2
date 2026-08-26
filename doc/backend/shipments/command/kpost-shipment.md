@@ -9,4 +9,6 @@
 연동이 붙으면 [shipments](../../../database/shipments.md) 에 요청·응답을 통째로
 남긴다. 실패했을 때 무엇을 보냈는지 알아야 다시 보낼 수 있기 때문이다.
 
-구현: `server-py/app/functions/kpost_shipment.py`
+## 관련 파일
+
+- [`server-py/app/functions/kpost_shipment.py`](../../../../server-py/app/functions/kpost_shipment.py)

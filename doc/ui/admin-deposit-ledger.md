@@ -4,6 +4,7 @@
 
 관련: [deposit_transactions](../database/deposit_transactions.md)
 
----
+## 관련 파일
 
-구현: `src/pages/admin/DepositLedger.tsx` · 경로: `/admin/deposits/ledger`
+- [`src/pages/admin/DepositLedger.tsx`](../../src/pages/admin/DepositLedger.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

@@ -4,6 +4,8 @@
 
 관련: [kakao-login](../backend/auth/command/kakao-login.md)
 
----
+## 관련 파일
 
-구현: `src/pages/auth/Login.tsx` · 경로: `/login`
+- [`src/pages/auth/Login.tsx`](../../src/pages/auth/Login.tsx)
+- [`src/components/auth/KakaoLoginButton.tsx`](../../src/components/auth/KakaoLoginButton.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

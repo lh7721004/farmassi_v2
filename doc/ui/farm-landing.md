@@ -9,6 +9,7 @@
 `landing_blocks` 를 저장할 때는 **JSON 문자열로 만들어 보내야 한다.**
 [query-write 주의](../backend/platform/command/query-write.md) 참고.
 
----
+## 관련 파일
 
-구현: `src/pages/order/FarmLanding.tsx` · 경로: `/farm/:farmSlug/landingpage`
+- [`src/pages/order/FarmLanding.tsx`](../../src/pages/order/FarmLanding.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

@@ -38,3 +38,16 @@
 |---|---|---|
 | `farm_members_admin_write` | ALL | `private.is_admin()` |
 | `farm_members_select` | SELECT | `((user_id = auth.uid()) OR private.is_admin() OR private.is_farm_member(farm_id))` |
+
+## 정의
+
+- [`supabase/migrations/20260817000001_init_farmassi.sql`](../../supabase/migrations/20260817000001_init_farmassi.sql)
+
+## 쓰는 곳
+
+- [`server-py/app/functions/approve_farm.py`](../../server-py/app/functions/approve_farm.py)
+- [`server-py/app/functions/kpost_shipment.py`](../../server-py/app/functions/kpost_shipment.py)
+- [`server-py/app/shared/push.py`](../../server-py/app/shared/push.py)
+- [`server-py/app/storage.py`](../../server-py/app/storage.py)
+- [`src/lib/auth.tsx`](../../src/lib/auth.tsx)
+- [`src/pages/admin/Farms.tsx`](../../src/pages/admin/Farms.tsx)

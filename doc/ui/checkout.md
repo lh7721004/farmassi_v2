@@ -15,6 +15,9 @@
 
 관련: [orders 테이블](../database/orders.md)
 
----
+## 관련 파일
 
-구현: `src/pages/order/Checkout.tsx` · 경로: `/farm/:farmSlug/checkout`
+- [`src/pages/order/Checkout.tsx`](../../src/pages/order/Checkout.tsx)
+- [`src/components/shared/AddressPicker.tsx`](../../src/components/shared/AddressPicker.tsx)
+- [`server-py/app/functions/create_order.py`](../../server-py/app/functions/create_order.py)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

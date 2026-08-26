@@ -7,6 +7,8 @@
 
 계좌 복사 화면([account-copy](account-copy.md))으로 이어진다.
 
----
+## 관련 파일
 
-구현: `src/pages/order/OrderComplete.tsx` · 경로: `/me/orders/:orderId/complete`
+- [`src/pages/order/OrderComplete.tsx`](../../src/pages/order/OrderComplete.tsx)
+- [`src/components/shared/DepositGuide.tsx`](../../src/components/shared/DepositGuide.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

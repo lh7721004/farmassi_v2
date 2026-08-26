@@ -4,6 +4,8 @@
 
 상태 라벨: `입금대기` → `입금완료` → `송장 발급 완료` → `발송` → `완료`.
 
----
+## 관련 파일
 
-구현: `src/pages/farm/Orders.tsx` · 경로: `/admin/farms/:farmId/orders`
+- [`src/pages/farm/Orders.tsx`](../../src/pages/farm/Orders.tsx)
+- [`src/lib/orderStatus.ts`](../../src/lib/orderStatus.ts)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)
