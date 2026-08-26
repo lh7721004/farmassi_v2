@@ -1,0 +1,14 @@
+# 주문 관리 — `/admin/orders`
+
+전체 주문. 상태별로 거른다.
+
+연락처가 보이지 않던 문제를 고쳤다 — 조회에서 전화번호 칸이 빠져 있었다.
+
+**요청 대기 중** — 주문자가 적은 모든 정보를 이 화면에서 볼 수 있게 해 달라는
+요청이 있다(2026-08-26).
+
+## 관련 파일
+
+- [`src/pages/admin/Orders.tsx`](../../src/pages/admin/Orders.tsx)
+- [`src/lib/orderStatus.ts`](../../src/lib/orderStatus.ts)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)
