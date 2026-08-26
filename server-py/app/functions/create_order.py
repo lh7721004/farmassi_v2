@@ -80,6 +80,8 @@ async def create_order(ctx: FnCtx) -> FnResult:
         "sender_name": (sender.get("name") or "").strip() or None,
         "sender_phone": (sender.get("phone") or "").strip() or None,
         "sender_address": (sender.get("address") or "").strip() or None,
+        "sender_zonecode": (sender.get("zonecode") or "").strip() or None,
+        "sender_address_detail": (sender.get("addressDetail") or "").strip() or None,
         "total_amount": total,
         "shipping_fee": shipping_total,
         "deposit_due_amount": total,

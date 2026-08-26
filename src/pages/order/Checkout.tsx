@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronDown, LocateFixed, MapPin, Search } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { ShippingScheduleNotice } from '../../components/shared/ShippingScheduleNotice'
 import { Header } from '../../components/layout/Header'
 import { Button } from '../../components/ui/Button'
@@ -56,6 +56,8 @@ export function Checkout() {
     phone: '',
     name: '',
     senderPhone: '',
+    zonecode: '',
+    address: '',
     addressDetail: '',
   })
   const [sameAsDepositorUi, setSameAsDepositorUi] = useState(false)
@@ -200,7 +202,9 @@ export function Checkout() {
           depositorName: senderUi.depositorName,
           name: senderUi.name,
           phone: senderUi.phone,
-          address: senderUi.addressDetail,
+          zonecode: senderUi.zonecode,
+          address: senderUi.address,
+          addressDetail: senderUi.addressDetail,
         },
         items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
         recipient: {
@@ -353,31 +357,30 @@ export function Checkout() {
                 value={senderUi.senderPhone}
                 onChange={(senderPhone) => setSenderUi((p) => ({ ...p, senderPhone }))}
               />
+              {/*
+                버튼만 있고 아무 동작도 붙어 있지 않았다. 그래서 보내는 분
+                주소는 저장된 적이 없고 상세주소만 sender_address 로 들어갔다.
+                배송지와 같은 선택기를 그대로 쓴다.
+              */}
               <div className="space-y-3">
                 <p className="text-xs font-medium text-muted">주소 (선택)</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" variant="secondary">
-                    <LocateFixed className="h-4 w-4" />
-                    현재 위치
-                  </Button>
-                  <Button type="button" variant="outline">
-                    <Search className="h-4 w-4" />
-                    주소 검색
-                  </Button>
-                </div>
-                <div className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left">
-                  <p className="flex items-center gap-2 text-sm text-muted">
-                    <MapPin className="h-4 w-4 shrink-0" />
-                    보내는 분 주소를 현재 위치 또는 검색으로 설정해 주세요
-                  </p>
-                </div>
-                <Input
-                  form=""
-                  label="상세주소 (선택)"
-                  placeholder="동·호수 등"
-                  autoComplete="off"
-                  value={senderUi.addressDetail}
-                  onChange={(e) => setSenderUi((p) => ({ ...p, addressDetail: e.target.value }))}
+                <AddressPicker
+                  value={{
+                    zonecode: senderUi.zonecode,
+                    address: senderUi.address,
+                    addressDetail: senderUi.addressDetail,
+                  }}
+                  searchTitle="보내는 분 주소 검색"
+                  emptyHint="보내는 분 주소를 현재 위치 또는 검색으로 설정해 주세요"
+                  detailLabel="상세주소 (선택)"
+                  onChange={(next) =>
+                    setSenderUi((p) => ({
+                      ...p,
+                      zonecode: next.zonecode,
+                      address: next.address,
+                      addressDetail: next.addressDetail,
+                    }))
+                  }
                 />
               </div>
             </>
