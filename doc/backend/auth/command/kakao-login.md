@@ -11,4 +11,7 @@
 
 토큰은 브라우저 `localStorage` 의 `farmassi-token` 에 담긴다.
 
-구현: `server-py/app/kakao.py`, `server-py/app/jwt_session.py`
+## 관련 파일
+
+- [`server-py/app/kakao.py`](../../../../server-py/app/kakao.py)
+- [`server-py/app/jwt_session.py`](../../../../server-py/app/jwt_session.py)

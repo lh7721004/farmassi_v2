@@ -35,6 +35,6 @@ PostgreSQL. 권한은 **RLS** 로 건다 — 표마다 정책이 붙어 있고,
 
 ## 백업
 
-매일 04:30 전체 백업. DB 를 건드리는 작업 전에는 `server/db/snapshot.sh` 로
-따로 스냅샷을 뜨고, 되돌릴 때는 `server/db/restore.sh` 를 쓴다.
-마이그레이션은 `supabase/migrations/` 에 시간순으로 쌓는다.
+매일 04:30 전체 백업. DB 를 건드리는 작업 전에는 [`server/db/snapshot.sh`](../../server/db/snapshot.sh) 로
+따로 스냅샷을 뜨고, 되돌릴 때는 [`server/db/restore.sh`](../../server/db/restore.sh) 를 쓴다.
+마이그레이션은 [`supabase/migrations/`](../../supabase/migrations) 에 시간순으로 쌓는다.

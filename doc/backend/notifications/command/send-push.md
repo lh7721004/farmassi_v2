@@ -7,4 +7,7 @@
 
 주문이 들어오면 농가에 알림이 필요하다는 요청에서 나왔다.
 
-구현: `server-py/app/functions/send_push.py`, `server-py/app/shared/push.py`
+## 관련 파일
+
+- [`server-py/app/functions/send_push.py`](../../../../server-py/app/functions/send_push.py)
+- [`server-py/app/shared/push.py`](../../../../server-py/app/shared/push.py)

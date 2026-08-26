@@ -11,4 +11,7 @@
 붙이지 않는다. "김철수" 로 주문했는데 "고길동" 이 보낸 경우가 있어서다. 그런
 건은 사람이 [match-deposit](match-deposit.md) 으로 확인해 연결한다.
 
-구현: `server-py/app/functions/scrape_deposits.py`, `server-py/app/shared/deposit_matching.py`
+## 관련 파일
+
+- [`server-py/app/functions/scrape_deposits.py`](../../../../server-py/app/functions/scrape_deposits.py)
+- [`server-py/app/shared/deposit_matching.py`](../../../../server-py/app/shared/deposit_matching.py)

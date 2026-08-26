@@ -43,3 +43,13 @@
 |---|---|---|
 | `shipping_pauses_select` | SELECT | `true` |
 | `shipping_pauses_write` | ALL | `(private.is_admin() OR private.is_farm_member(farm_id))` |
+
+## 정의
+
+- [`supabase/migrations/20260825000000_shipping_pauses.sql`](../../supabase/migrations/20260825000000_shipping_pauses.sql)
+
+## 쓰는 곳
+
+- [`src/components/shared/ShippingPausePanel.tsx`](../../src/components/shared/ShippingPausePanel.tsx)
+- [`src/lib/useShippingSchedule.ts`](../../src/lib/useShippingSchedule.ts)
+- [`src/pages/admin/Shipments.tsx`](../../src/pages/admin/Shipments.tsx)

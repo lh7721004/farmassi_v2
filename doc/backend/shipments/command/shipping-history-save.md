@@ -12,4 +12,6 @@
 
 품목 수량의 합은 그날 건수 합계와 맞아야 한다.
 
-구현: `src/lib/shippingHistory.ts` (`saveDay`)
+## 관련 파일
+
+- [`src/lib/shippingHistory.ts`](../../../../src/lib/shippingHistory.ts)

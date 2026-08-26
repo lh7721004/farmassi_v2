@@ -7,4 +7,6 @@
 `role` 이 `admin` 인지로 관리자 화면 접근을 가른다. 농가 권한은 여기 없고
 [farm_members](../../../database/farm_members.md) 를 따로 본다.
 
-구현: `server-py/app/main.py`
+## 관련 파일
+
+- [`server-py/app/main.py`](../../../../server-py/app/main.py)

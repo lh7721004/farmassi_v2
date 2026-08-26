@@ -26,3 +26,12 @@
 | 정책 | 대상 | 조건 |
 |---|---|---|
 | `holidays_select` | SELECT | `true` |
+
+## 정의
+
+- [`supabase/migrations/20260825000001_holidays.sql`](../../supabase/migrations/20260825000001_holidays.sql)
+
+## 쓰는 곳
+
+- [`src/lib/useHolidays.ts`](../../src/lib/useHolidays.ts)
+- [`src/lib/useShippingSchedule.ts`](../../src/lib/useShippingSchedule.ts)

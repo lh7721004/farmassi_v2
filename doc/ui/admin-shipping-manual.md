@@ -5,6 +5,7 @@
 우체국 API 연동이 아직이라 실무는 엑셀로 돈다.
 [kpost-shipment](../backend/shipments/command/kpost-shipment.md) 참고.
 
----
+## 관련 파일
 
-구현: `src/pages/admin/ShippingManual.tsx` · 경로: `/admin/shipping-manual`
+- [`src/pages/admin/ShippingManual.tsx`](../../src/pages/admin/ShippingManual.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

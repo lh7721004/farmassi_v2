@@ -7,4 +7,6 @@
 
 관리자만 부를 수 있다.
 
-구현: `server-py/app/functions/match_deposit.py`
+## 관련 파일
+
+- [`server-py/app/functions/match_deposit.py`](../../../../server-py/app/functions/match_deposit.py)

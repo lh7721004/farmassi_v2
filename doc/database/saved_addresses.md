@@ -37,3 +37,12 @@
 | 정책 | 대상 | 조건 |
 |---|---|---|
 | `saved_addresses_own` | ALL | `(user_id = auth.uid())` |
+
+## 정의
+
+- [`supabase/migrations/20260817000001_init_farmassi.sql`](../../supabase/migrations/20260817000001_init_farmassi.sql)
+
+## 쓰는 곳
+
+- [`server-py/app/functions/create_order.py`](../../server-py/app/functions/create_order.py)
+- [`src/pages/order/Checkout.tsx`](../../src/pages/order/Checkout.tsx)

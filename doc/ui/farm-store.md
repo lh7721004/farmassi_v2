@@ -19,8 +19,12 @@
 할인은 [products](../database/products.md) 의 `list_price` 가 `price` 보다 클 때만
 취소선으로 보인다.
 
-관련: `src/lib/deliveryEstimate.ts` · `src/lib/useShippingSchedule.ts` · `src/components/shared/ShippingScheduleNotice.tsx`
+관련: [`src/lib/deliveryEstimate.ts`](../../src/lib/deliveryEstimate.ts) · [`src/lib/useShippingSchedule.ts`](../../src/lib/useShippingSchedule.ts) · [`src/components/shared/ShippingScheduleNotice.tsx`](../../src/components/shared/ShippingScheduleNotice.tsx)
 
----
+## 관련 파일
 
-구현: `src/pages/order/FarmStore.tsx` · 경로: `/farm/:farmSlug`
+- [`src/pages/order/FarmStore.tsx`](../../src/pages/order/FarmStore.tsx)
+- [`src/lib/deliveryEstimate.ts`](../../src/lib/deliveryEstimate.ts)
+- [`src/lib/useShippingSchedule.ts`](../../src/lib/useShippingSchedule.ts)
+- [`src/components/shared/ShippingScheduleNotice.tsx`](../../src/components/shared/ShippingScheduleNotice.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

@@ -40,3 +40,17 @@
 | `profiles_admin_all` | ALL | `private.is_admin()` |
 | `profiles_select` | SELECT | `((id = auth.uid()) OR private.is_admin())` |
 | `profiles_update_self` | UPDATE | `(id = auth.uid())` |
+
+## 정의
+
+- [`supabase/migrations/20260817000001_init_farmassi.sql`](../../supabase/migrations/20260817000001_init_farmassi.sql)
+
+## 쓰는 곳
+
+- [`server-py/app/shared/util.py`](../../server-py/app/shared/util.py)
+- [`server-py/app/storage.py`](../../server-py/app/storage.py)
+- [`src/components/auth/ProfileCompletionSheet.tsx`](../../src/components/auth/ProfileCompletionSheet.tsx)
+- [`src/lib/auth.tsx`](../../src/lib/auth.tsx)
+- [`src/pages/admin/Farms.tsx`](../../src/pages/admin/Farms.tsx)
+- [`src/pages/farm/Settings.tsx`](../../src/pages/farm/Settings.tsx)
+- [`src/pages/order/Checkout.tsx`](../../src/pages/order/Checkout.tsx)

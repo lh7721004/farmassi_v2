@@ -72,3 +72,25 @@
 |---|---|---|
 | `products_select` | SELECT | `((is_active = true) OR private.is_admin() OR private.is_farm_member(farm_id))` |
 | `products_write` | ALL | `(private.is_admin() OR private.is_farm_member(farm_id))` |
+
+## 정의
+
+- [`supabase/migrations/20260819000004_product_sale_status.sql`](../../supabase/migrations/20260819000004_product_sale_status.sql)
+- [`supabase/migrations/20260819000010_product_parcel_weight_3kg.sql`](../../supabase/migrations/20260819000010_product_parcel_weight_3kg.sql)
+- [`supabase/migrations/20260823000002_farms_visible_when_inactive.sql`](../../supabase/migrations/20260823000002_farms_visible_when_inactive.sql)
+- [`supabase/migrations/20260824000001_products_list_price.sql`](../../supabase/migrations/20260824000001_products_list_price.sql)
+- [`supabase/migrations/20260824000002_products_kpost_and_inquiry.sql`](../../supabase/migrations/20260824000002_products_kpost_and_inquiry.sql)
+- [`supabase/migrations/20260824000007_qty_limits.sql`](../../supabase/migrations/20260824000007_qty_limits.sql)
+- [`supabase/migrations/20260825000002_shipping_history.sql`](../../supabase/migrations/20260825000002_shipping_history.sql)
+- [`supabase/migrations/20260826000000_shipping_fees.sql`](../../supabase/migrations/20260826000000_shipping_fees.sql)
+
+## 쓰는 곳
+
+- [`server-py/app/functions/create_order.py`](../../server-py/app/functions/create_order.py)
+- [`src/App.tsx`](../../src/App.tsx)
+- [`src/components/shared/ProductImportDialog.tsx`](../../src/components/shared/ProductImportDialog.tsx)
+- [`src/components/shared/ProductManager.tsx`](../../src/components/shared/ProductManager.tsx)
+- [`src/lib/shippingHistory.ts`](../../src/lib/shippingHistory.ts)
+- [`src/pages/admin/Farms.tsx`](../../src/pages/admin/Farms.tsx)
+- [`src/pages/order/Checkout.tsx`](../../src/pages/order/Checkout.tsx)
+- [`src/pages/order/FarmStore.tsx`](../../src/pages/order/FarmStore.tsx)

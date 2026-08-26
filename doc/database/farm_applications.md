@@ -56,3 +56,12 @@
 | `farm_applications_insert` | INSERT | `-` |
 | `farm_applications_select` | SELECT | `((user_id = auth.uid()) OR private.is_admin())` |
 | `farm_applications_update_admin` | UPDATE | `private.is_admin()` |
+
+## 정의
+
+- [`supabase/migrations/20260817000001_init_farmassi.sql`](../../supabase/migrations/20260817000001_init_farmassi.sql)
+- [`supabase/migrations/20260817000002_fk_indexes.sql`](../../supabase/migrations/20260817000002_fk_indexes.sql)
+
+## 쓰는 곳
+
+- [`server-py/app/functions/approve_farm.py`](../../server-py/app/functions/approve_farm.py)

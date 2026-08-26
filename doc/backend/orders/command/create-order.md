@@ -7,7 +7,7 @@
 
 배송비는 [products](../../../database/products.md) 의 `shipping_fees` 구간표에서
 뽑는다. `qty` 는 '이 수량까지' 이고, 마지막 구간을 넘으면 마지막 구간이 되풀이된다.
-계산은 `server-py/app/shared/shipping_fee.py` 에 있고 프론트의
+계산은 [`server-py/app/shared/shipping_fee.py`](../../../../server-py/app/shared/shipping_fee.py) 에 있고 프론트의
 `src/lib/shippingFee.ts` 와 같은 규칙이다.
 
 `deposit_due_amount` 는 **손님이 실제로 보낼 금액**으로 넣는다. 자동 대사가 이
@@ -15,4 +15,6 @@
 
 주문이 만들어지면 농가에 알림을 쌓는다. [notifications](../../notifications/command/send-push.md) 참고.
 
-구현: `server-py/app/functions/create_order.py`
+## 관련 파일
+
+- [`server-py/app/functions/create_order.py`](../../../../server-py/app/functions/create_order.py)

@@ -75,3 +75,23 @@
 |---|---|---|
 | `orders_select` | SELECT | `((customer_id = auth.uid()) OR private.is_admin() OR private.is_farm_member(farm_id))` |
 | `orders_update_ops` | UPDATE | `(private.is_admin() OR private.is_farm_member(farm_id))` |
+
+## 정의
+
+- [`supabase/migrations/20260817000001_init_farmassi.sql`](../../supabase/migrations/20260817000001_init_farmassi.sql)
+- [`supabase/migrations/20260817000002_fk_indexes.sql`](../../supabase/migrations/20260817000002_fk_indexes.sql)
+- [`supabase/migrations/20260824000003_orders_depositor_and_sender.sql`](../../supabase/migrations/20260824000003_orders_depositor_and_sender.sql)
+- [`supabase/migrations/20260826000000_shipping_fees.sql`](../../supabase/migrations/20260826000000_shipping_fees.sql)
+
+## 쓰는 곳
+
+- [`server-py/app/functions/confirm_deposit.py`](../../server-py/app/functions/confirm_deposit.py)
+- [`server-py/app/functions/create_order.py`](../../server-py/app/functions/create_order.py)
+- [`server-py/app/functions/kpost_shipment.py`](../../server-py/app/functions/kpost_shipment.py)
+- [`server-py/app/functions/match_deposit.py`](../../server-py/app/functions/match_deposit.py)
+- [`server-py/app/functions/scrape_deposits.py`](../../server-py/app/functions/scrape_deposits.py)
+- [`server-py/app/sb.py`](../../server-py/app/sb.py)
+- [`src/App.tsx`](../../src/App.tsx)
+- [`src/components/shared/KpostParcelExport.tsx`](../../src/components/shared/KpostParcelExport.tsx)
+- [`src/lib/apiClient.ts`](../../src/lib/apiClient.ts)
+- [`src/lib/shippingHistory.ts`](../../src/lib/shippingHistory.ts)

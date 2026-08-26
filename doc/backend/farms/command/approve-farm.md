@@ -11,4 +11,6 @@
 
 관리자만 부를 수 있다.
 
-구현: `server-py/app/functions/approve_farm.py`
+## 관련 파일
+
+- [`server-py/app/functions/approve_farm.py`](../../../../server-py/app/functions/approve_farm.py)

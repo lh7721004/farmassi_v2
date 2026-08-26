@@ -9,4 +9,6 @@
 품목은 이름으로 저장돼 있어서, 불러올 때 **이름 → 상품 id** 로 다시 맞춘다.
 상품이 지워져도 이력은 남아야 하기 때문에 이름을 값으로 저장한다.
 
-구현: `src/lib/shippingHistory.ts` (`loadMonth`)
+## 관련 파일
+
+- [`src/lib/shippingHistory.ts`](../../../../src/lib/shippingHistory.ts)

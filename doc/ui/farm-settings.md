@@ -6,6 +6,7 @@
 [bankda-account-status](../backend/deposits/read/bankda-account-status.md) 로 확인하고,
 [bankda-ott](../backend/deposits/command/bankda-ott.md) 로 등록 링크를 받는다.
 
----
+## 관련 파일
 
-구현: `src/pages/farm/Settings.tsx` · 경로: `/admin/farms/:farmId/settings`
+- [`src/pages/farm/Settings.tsx`](../../src/pages/farm/Settings.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

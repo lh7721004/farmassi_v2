@@ -27,6 +27,11 @@
 
 관련: [shipping_history](../database/shipping_history.md) · [shipping-history-save](../backend/shipments/command/shipping-history-save.md)
 
----
+## 관련 파일
 
-구현: `src/pages/admin/ShippingHistory.tsx` · 경로: `/admin/shipping-history`
+- [`src/pages/admin/ShippingHistory.tsx`](../../src/pages/admin/ShippingHistory.tsx)
+- [`src/lib/shippingHistory.ts`](../../src/lib/shippingHistory.ts)
+- [`src/lib/deliveryDays.ts`](../../src/lib/deliveryDays.ts)
+- [`src/lib/useHolidays.ts`](../../src/lib/useHolidays.ts)
+- [`src/lib/useUnsavedGuard.ts`](../../src/lib/useUnsavedGuard.ts)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

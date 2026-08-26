@@ -53,3 +53,18 @@
 | 정책 | 대상 | 조건 |
 |---|---|---|
 | `deposit_transactions_select` | SELECT | `(private.is_admin() OR ((farm_id IS NOT NULL) AND private.is_farm_member(farm_id)))` |
+
+## 정의
+
+- [`supabase/migrations/20260817000001_init_farmassi.sql`](../../supabase/migrations/20260817000001_init_farmassi.sql)
+- [`supabase/migrations/20260817000002_fk_indexes.sql`](../../supabase/migrations/20260817000002_fk_indexes.sql)
+- [`supabase/migrations/20260819061832_deposit_callback_provider.sql`](../../supabase/migrations/20260819061832_deposit_callback_provider.sql)
+- [`supabase/migrations/20260821000000_deposit_bankda.sql`](../../supabase/migrations/20260821000000_deposit_bankda.sql)
+- [`supabase/migrations/20260824000007_deposit_provider_keep_bankda.sql`](../../supabase/migrations/20260824000007_deposit_provider_keep_bankda.sql)
+
+## 쓰는 곳
+
+- [`server-py/app/functions/confirm_deposit.py`](../../server-py/app/functions/confirm_deposit.py)
+- [`server-py/app/functions/match_deposit.py`](../../server-py/app/functions/match_deposit.py)
+- [`server-py/app/functions/scrape_deposits.py`](../../server-py/app/functions/scrape_deposits.py)
+- [`src/pages/admin/DepositLedger.tsx`](../../src/pages/admin/DepositLedger.tsx)

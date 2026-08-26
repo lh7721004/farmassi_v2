@@ -42,5 +42,5 @@ dev 에서 확인한 뒤에 `main` 으로 올린다.
 ## 백업
 
 매일 04:30 에 DB 전체와 `.env` 3개를 `~/FetchAccount/db-backups/` 에 받는다.
-DB 를 건드리는 작업 전에는 `server/db/snapshot.sh` 로 따로 스냅샷을 뜬다.
-되돌릴 때는 `server/db/restore.sh`.
+DB 를 건드리는 작업 전에는 [`server/db/snapshot.sh`](../server/db/snapshot.sh) 로 따로 스냅샷을 뜬다.
+되돌릴 때는 [`server/db/restore.sh`](../server/db/restore.sh).

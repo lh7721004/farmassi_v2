@@ -15,4 +15,6 @@ Supabase 를 걷어내면서 **프론트 호출부를 한 줄도 고치지 않�
 `request.jwt.claim.sub` 로 세션에 심고, 정책이 그것을 읽는다. 어느 화면에서
 불러도 같은 규칙이 적용된다.
 
-구현: `server-py/app/query.py`
+## 관련 파일
+
+- [`server-py/app/query.py`](../../../../server-py/app/query.py)

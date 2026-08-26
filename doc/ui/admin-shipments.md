@@ -7,6 +7,9 @@
 
 여기서 [배송이력 관리](admin-shipping-history.md)로 들어간다.
 
----
+## 관련 파일
 
-구현: `src/pages/admin/Shipments.tsx` · 경로: `/admin/shipments`
+- [`src/pages/admin/Shipments.tsx`](../../src/pages/admin/Shipments.tsx)
+- [`src/components/shared/KpostParcelExport.tsx`](../../src/components/shared/KpostParcelExport.tsx)
+- [`src/lib/orderStatus.ts`](../../src/lib/orderStatus.ts)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

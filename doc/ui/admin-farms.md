@@ -10,6 +10,9 @@
 
 관련: [farms 테이블](../database/farms.md) · [farm-update](../backend/farms/command/farm-update.md)
 
----
+## 관련 파일
 
-구현: `src/pages/admin/Farms.tsx` · 경로: `/admin/farms · /admin/farms/:farmId`
+- [`src/pages/admin/Farms.tsx`](../../src/pages/admin/Farms.tsx)
+- [`src/lib/farmWorkspace.tsx`](../../src/lib/farmWorkspace.tsx)
+- [`src/components/auth/Guards.tsx`](../../src/components/auth/Guards.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

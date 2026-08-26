@@ -12,6 +12,8 @@
 
 관련: [products 테이블](../database/products.md)
 
----
+## 관련 파일
 
-구현: `src/pages/farm/Products.tsx` · 경로: `/admin/farms/:farmId/products`
+- [`src/pages/farm/Products.tsx`](../../src/pages/farm/Products.tsx)
+- [`src/components/shared/ProductManager.tsx`](../../src/components/shared/ProductManager.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

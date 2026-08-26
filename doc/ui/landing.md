@@ -10,6 +10,7 @@
 
 관련: [farms 테이블](../database/farms.md) · [farms/read/farm-list](../backend/farms/read/farm-list.md)
 
----
+## 관련 파일
 
-구현: `src/pages/Landing.tsx` · 경로: `/`
+- [`src/pages/Landing.tsx`](../../src/pages/Landing.tsx)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)

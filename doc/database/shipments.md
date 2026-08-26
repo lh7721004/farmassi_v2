@@ -45,3 +45,11 @@
 |---|---|---|
 | `shipments_admin_write` | ALL | `private.is_admin()` |
 | `shipments_select` | SELECT | `(private.is_admin() OR (EXISTS ( SELECT 1    FROM orders o   WHERE ((o.id = shipments.order_id) AND private.is_farm_member(o.farm_id)))))` |
+
+## 정의
+
+- [`supabase/migrations/20260817000001_init_farmassi.sql`](../../supabase/migrations/20260817000001_init_farmassi.sql)
+
+## 쓰는 곳
+
+- [`server-py/app/functions/kpost_shipment.py`](../../server-py/app/functions/kpost_shipment.py)

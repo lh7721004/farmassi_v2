@@ -72,3 +72,27 @@
 | `farms_insert_admin` | INSERT | `-` |
 | `farms_select` | SELECT | `true` |
 | `farms_update` | UPDATE | `(private.is_admin() OR private.is_farm_member(id))` |
+
+## 정의
+
+- [`supabase/migrations/20260823000001_drop_farms_bankda_merchant_email.sql`](../../supabase/migrations/20260823000001_drop_farms_bankda_merchant_email.sql)
+- [`supabase/migrations/20260823000002_farms_visible_when_inactive.sql`](../../supabase/migrations/20260823000002_farms_visible_when_inactive.sql)
+- [`supabase/migrations/20260824000000_farms_delivery_days.sql`](../../supabase/migrations/20260824000000_farms_delivery_days.sql)
+- [`supabase/migrations/20260824000004_farms_shipping_pause.sql`](../../supabase/migrations/20260824000004_farms_shipping_pause.sql)
+- [`supabase/migrations/20260824000006_farms_update_members.sql`](../../supabase/migrations/20260824000006_farms_update_members.sql)
+- [`supabase/migrations/20260824000007_qty_limits.sql`](../../supabase/migrations/20260824000007_qty_limits.sql)
+- [`supabase/migrations/20260825000000_shipping_pauses.sql`](../../supabase/migrations/20260825000000_shipping_pauses.sql)
+- [`supabase/migrations/20260825000002_shipping_history.sql`](../../supabase/migrations/20260825000002_shipping_history.sql)
+
+## 쓰는 곳
+
+- [`server-py/app/functions/approve_farm.py`](../../server-py/app/functions/approve_farm.py)
+- [`server-py/app/functions/bankda_account_status.py`](../../server-py/app/functions/bankda_account_status.py)
+- [`server-py/app/functions/bankda_ott.py`](../../server-py/app/functions/bankda_ott.py)
+- [`server-py/app/functions/create_order.py`](../../server-py/app/functions/create_order.py)
+- [`server-py/app/functions/scrape_deposits.py`](../../server-py/app/functions/scrape_deposits.py)
+- [`src/components/shared/ProductManager.tsx`](../../src/components/shared/ProductManager.tsx)
+- [`src/lib/auth.tsx`](../../src/lib/auth.tsx)
+- [`src/lib/farmWorkspace.tsx`](../../src/lib/farmWorkspace.tsx)
+- [`src/lib/orders.ts`](../../src/lib/orders.ts)
+- [`src/lib/shippingHistory.ts`](../../src/lib/shippingHistory.ts)
