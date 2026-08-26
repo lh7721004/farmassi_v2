@@ -164,6 +164,14 @@ export interface Order {
   deposit_confirmed_at: string | null
   deposit_confirmed_by: string | null
   deposit_provider: string | null
+  /** 손님이 적은 입금자명. 자동 대사의 후보로 쓴다. */
+  depositor_name: string | null
+  /** 보내는 분. 받는 분과 다를 수 있어 따로 받는다 (선물). */
+  sender_name: string | null
+  sender_phone: string | null
+  sender_address: string | null
+  /** 주문 전체 배송비. total_amount 에 이미 포함돼 있다. */
+  shipping_fee: number
   created_at: string
   updated_at: string
 }
