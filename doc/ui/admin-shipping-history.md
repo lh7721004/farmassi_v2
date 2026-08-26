@@ -1,0 +1,37 @@
+# 배송이력 관리 — `/admin/shipping-history`
+
+송장을 대신 접수해 준 건수를 농가별로 적어 두고 정산하는 화면. 건당 500원이다.
+
+**달력** — 공휴일이 빨갛게, 이름이 작게 붙는다. 배송 일시정지는 그 기간에 막대가
+이어지고 시작 칸과 일요일에 농원 이름이 적힌다. 매 칸에 적으면 잘려서 못 읽는다.
+
+**적을 수 있는 날** — 배송 가능일의 **전날**이다. 물건이 나가기 전날 적기 때문이다.
+월·수·금 배송이면 일·화·목에 적는다. 정지 기간에 나가는 날도 닫힌다. 예외로 적어야
+하면 '수동 수정' 을 눌러 연다.
+
+**오늘과 지난 날짜** — 오늘 칸은 바로 입력된다. 지난 날짜는 '수정' 을 눌러야 열린다.
+1일부터 오늘까지 카드가 다 만들어져 있어 빠뜨린 날을 소급해 적을 수 있다.
+
+**채널** — `직접연락`·`카톡 비즈니스` 는 사람이 적고, `팜어시` 는 사이트 주문에서
+자동으로 센다. 자동 값도 필요하면 풀어서 고칠 수 있다.
+
+**저장** — 자동 저장이 아니다. 저장 버튼을 눌러야 하고, 안 누른 채 나가려 하면
+막는다(`useUnsavedGuard`). 저장은 하루치를 통째로 한다.
+
+**품목** — 건수를 먼저 넣어야 품목을 넣을 수 있다. 품목 수량의 합이 건수 합계와
+맞아야 한다.
+
+**엑셀** — 그 달 전체 또는 농가 하나만 받는다. 정산이 농가별이기 때문이다.
+
+비활성 농가는 이 화면에 나오지 않는다.
+
+관련: [shipping_history](../database/shipping_history.md) · [shipping-history-save](../backend/shipments/command/shipping-history-save.md)
+
+## 관련 파일
+
+- [`src/pages/admin/ShippingHistory.tsx`](../../src/pages/admin/ShippingHistory.tsx)
+- [`src/lib/shippingHistory.ts`](../../src/lib/shippingHistory.ts)
+- [`src/lib/deliveryDays.ts`](../../src/lib/deliveryDays.ts)
+- [`src/lib/useHolidays.ts`](../../src/lib/useHolidays.ts)
+- [`src/lib/useUnsavedGuard.ts`](../../src/lib/useUnsavedGuard.ts)
+- 라우트: [`src/App.tsx`](../../src/App.tsx)
