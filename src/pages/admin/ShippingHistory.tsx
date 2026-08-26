@@ -21,7 +21,8 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { adminNavItems } from '../../config/adminNav'
-import { todayInSeoul } from '../../lib/deliveryEstimate'
+import { pauseCovering, todayInSeoul, type PauseRange } from '../../lib/deliveryEstimate'
+import { supabase } from '../../lib/supabase'
 import { WEEKDAYS, deliveryDaysLabel, writeDaysLabel } from '../../lib/deliveryDays'
 import { formatPrice } from '../../lib/format'
 
@@ -141,13 +142,22 @@ function formatDisplayDate(iso: string): string {
  * 이력은 물건이 나가기 전날 적는다. 그래서 그날이 배송 요일인지가 아니라
  * '다음날' 이 배송 요일인지를 본다. 월·수·금 배송이면 일·화·목에 적는다.
  */
-function farmWritableOn(farm: HistoryFarm, iso: string): boolean {
+function farmWritableOn(
+  farm: HistoryFarm,
+  iso: string,
+  pauses: PauseRange[] = [],
+): boolean {
+  const [y, m, d] = iso.split('-').map(Number)
+  const next = new Date(y, m - 1, d + 1)
+  const nextIso = ymd(next.getFullYear(), next.getMonth() + 1, next.getDate())
+
+  // 나가는 날이 정지 기간이면 적을 것도 없다.
+  if (pauseCovering(pauses, nextIso)) return false
+
   // 배송 요일을 정하지 않은 농가는 제한이 없는 것으로 본다. 빈 배열을
   // '아무 요일도 안 됨' 으로 읽으면 그 농가는 이력을 아예 적을 수 없다.
   if (farm.deliveryDays.length === 0) return true
-  const [y, m, d] = iso.split('-').map(Number)
-  const nextDay = new Date(y, m - 1, d + 1).getDay()
-  return farm.deliveryDays.includes(nextDay)
+  return farm.deliveryDays.includes(next.getDay())
 }
 
 function monthKey(year: number, month: number): string {
@@ -177,6 +187,8 @@ async function downloadMonthExcel(
   month: number,
   monthDays: DayRecord[],
   farms: HistoryFarm[],
+  /** 파일 이름에 붙일 농가 이름. 전체를 받을 때는 빈 문자열. */
+  farmLabel = '',
 ) {
   if (monthDays.length === 0) throw new Error('다운로드할 이력이 없습니다.')
 
@@ -233,7 +245,7 @@ async function downloadMonthExcel(
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `송장대행이력_${year}-${String(month).padStart(2, '0')}.xlsx`
+  link.download = `송장대행이력${farmLabel ? `_${farmLabel}` : ''}_${year}-${String(month).padStart(2, '0')}.xlsx`
   link.click()
   URL.revokeObjectURL(url)
 }
@@ -265,9 +277,14 @@ export function AdminShippingHistory() {
     farmName: string
   } | null>(null)
   const [exportBusy, setExportBusy] = useState(false)
+  /** 엑셀로 내려받을 농가. 빈 문자열이면 전체. */
+  const [exportFarmId, setExportFarmId] = useState('')
   const [exportError, setExportError] = useState('')
   /** 팔린 물건 전체 펼침 — `${date}:${farmId}` */
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(() => new Set())
+
+  /** 농가별 배송 일시정지 구간 (보고 있는 달과 겹치는 것만) */
+  const [pauses, setPauses] = useState<Record<string, PauseRange[]>>({})
 
   const viewMonthKey = monthKey(viewYear, viewMonth)
   // 달력에 공휴일을 빨갛게 보여준다. 배송 일시정지 달력과 같은 훅을 쓴다.
@@ -288,6 +305,28 @@ export function AdminShippingHistory() {
     })()
     return () => { alive = false }
   }, [])
+
+  // 보고 있는 달과 겹치는 정지 구간만 가져온다. 지난 달을 볼 수도 있어서
+  // '오늘 이후' 로 자르면 안 된다.
+  useEffect(() => {
+    let alive = true
+    void (async () => {
+      const first = `${viewMonthKey}-01`
+      const last = ymd(viewYear, viewMonth, daysInMonth(viewYear, viewMonth))
+      const { data } = await supabase
+        .from('shipping_pauses')
+        .select('farm_id, start_date, end_date, reason')
+        .lte('start_date', last)
+        .gte('end_date', first)
+      if (!alive) return
+      const byFarm: Record<string, PauseRange[]> = {}
+      for (const row of (data ?? []) as any[]) {
+        (byFarm[row.farm_id] ??= []).push(row)
+      }
+      setPauses(byFarm)
+    })()
+    return () => { alive = false }
+  }, [viewYear, viewMonth, viewMonthKey])
 
   // 달을 옮길 때마다 그 달 이력을 읽는다. 팜어시 채널은 저장된 값이 없으면
   // 주문 수로 채운다 — 사람이 고친 값은 덮지 않는다.
@@ -311,10 +350,21 @@ export function AdminShippingHistory() {
           }
           byDate.set(date, day)
         }
-        // 오늘 카드는 저장된 값이 없어도 항상 있어야 한다. 바로 입력할 수
-        // 있어야 하기 때문이다. 이 달을 보고 있을 때만 만든다.
-        if (today.startsWith(viewMonthKey) && !byDate.has(today)) {
-          byDate.set(today, createEmptyDay(today, farms, farmProducts))
+        // 이 달 1일부터 오늘까지는 저장된 값이 없어도 카드를 만든다.
+        //
+        // 오늘 것만 만들면 페이지가 생기기 전 날짜를 적을 수 없다. 실제로
+        // 8월 23~25일 이력을 적지 못하는 문제가 있었다. 지난 날짜는 그대로
+        // 잠겨 있어서 '수정' 을 눌러야 입력된다.
+        const lastDay = Math.min(
+          daysInMonth(viewYear, viewMonth),
+          today.startsWith(viewMonthKey) ? Number(today.slice(8)) : daysInMonth(viewYear, viewMonth),
+        )
+        if (`${viewMonthKey}-01` <= today) {
+          for (let d = 1; d <= lastDay; d += 1) {
+            const date = ymd(viewYear, viewMonth, d)
+            if (date > today) break
+            if (!byDate.has(date)) byDate.set(date, createEmptyDay(date, farms, farmProducts))
+          }
         }
         setDays([...byDate.values()].sort((a, b) => b.date.localeCompare(a.date)))
       } catch (err) {
@@ -339,6 +389,36 @@ export function AdminShippingHistory() {
     () => Object.fromEntries(days.map((d) => [d.date, d])),
     [days],
   )
+
+  /**
+   * 날짜별 정지 막대.
+   *
+   * 연속한 칸이 이어져 보여야 하므로 시작·끝 칸만 둥글게 깎고 가운데는
+   * 각지게 둔다. 농원 이름은 시작 칸과 주가 바뀌는 일요일에만 적는다 —
+   * 매 칸에 적으면 이름이 잘려서 읽을 수가 없다.
+   */
+  const pauseBars = useMemo(() => {
+    const byDate: Record<string, { farmId: string; farmName: string; start: boolean; end: boolean; label: string }[]> = {}
+    const count = daysInMonth(viewYear, viewMonth)
+    for (const farm of farms) {
+      for (const pause of pauses[farm.id] ?? []) {
+        for (let d = 1; d <= count; d += 1) {
+          const date = ymd(viewYear, viewMonth, d)
+          if (date < pause.start_date || date > pause.end_date) continue
+          const start = date === pause.start_date
+          const weekStart = new Date(viewYear, viewMonth - 1, d).getDay() === 0
+          ;(byDate[date] ??= []).push({
+            farmId: farm.id,
+            farmName: farm.name,
+            start,
+            end: date === pause.end_date,
+            label: start || weekStart ? farm.name : '',
+          })
+        }
+      }
+    }
+    return byDate
+  }, [farms, pauses, viewYear, viewMonth])
 
   const calendarCells = useMemo(() => {
     const firstWeekday = new Date(viewYear, viewMonth - 1, 1).getDay()
@@ -511,7 +591,13 @@ export function AdminShippingHistory() {
     setExportError('')
     setExportBusy(true)
     try {
-      await downloadMonthExcel(viewYear, viewMonth, monthDays, farms)
+      // 농가를 고르면 그 농가 칸만 담는다. 정산은 농가별로 하기 때문이다.
+      const picked = exportFarmId ? farms.filter((f) => f.id === exportFarmId) : farms
+      if (picked.length === 0) throw new Error('농가를 찾지 못했습니다.')
+      await downloadMonthExcel(
+        viewYear, viewMonth, monthDays, picked,
+        exportFarmId ? picked[0].name : '',
+      )
     } catch (err) {
       setExportError(err instanceof Error ? err.message : '엑셀을 만들지 못했습니다.')
     } finally {
@@ -523,7 +609,7 @@ export function AdminShippingHistory() {
     <AppShell navItems={adminNavItems} roleLabel="관리자" settingsPath="/admin/none">
       <Header
         title="배송이력 관리"
-        subtitle={`${viewYear}년 ${viewMonth}월 · 더미 (로컬만, 저장 없음)`}
+        subtitle={`${viewYear}년 ${viewMonth}월`}
         showBack
         backTo="/admin/shipments"
       />
@@ -567,15 +653,20 @@ export function AdminShippingHistory() {
               // 공휴일과 일요일은 우체국이 쉬는 날이라 같은 색으로 묶는다.
               const restDay = Boolean(holidayName) || isSundayYmd(date)
               const clickable = Boolean(record)
+              const bars = pauseBars[date] ?? []
               return (
                 <button
                   key={date}
                   type="button"
                   disabled={!clickable}
                   onClick={() => scrollToDay(date)}
-                  title={holidayName ?? undefined}
+                  title={
+                    [holidayName, ...bars.map((b) => `${b.farmName} 배송 일시정지`)]
+                      .filter(Boolean)
+                      .join(' · ') || undefined
+                  }
                   className={[
-                    'relative flex h-11 w-full flex-col items-center justify-center rounded-xl text-sm leading-none',
+                    'relative flex h-14 w-full flex-col items-center justify-start gap-0.5 rounded-xl pt-1.5 text-sm leading-none',
                     clickable ? 'hover:bg-primary-light/60' : 'cursor-default',
                     isToday ? 'font-semibold text-primary' : restDay ? 'text-red-600' : 'text-gray-800',
                     !clickable && !isToday && !restDay ? 'text-gray-300' : '',
@@ -590,8 +681,29 @@ export function AdminShippingHistory() {
                       {shortHolidayName(holidayName)}
                     </span>
                   )}
-                  {hasWork && (
-                    <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-primary" />
+                  {hasWork && <span className="h-1 w-1 rounded-full bg-primary" />}
+                  {bars.length > 0 && (
+                    <span className="absolute inset-x-0 bottom-0.5 flex flex-col gap-px">
+                      {bars.slice(0, 2).map((bar) => (
+                        <span
+                          key={`${bar.farmId}-${date}`}
+                          className={[
+                            'h-3 truncate bg-amber-200 px-1 text-[8px] font-normal leading-3 text-amber-900',
+                            bar.start ? 'ml-0.5 rounded-l-full' : '',
+                            bar.end ? 'mr-0.5 rounded-r-full' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                        >
+                          {bar.label}
+                        </span>
+                      ))}
+                      {bars.length > 2 && (
+                        <span className="text-[8px] leading-3 text-amber-800">
+                          +{bars.length - 2}
+                        </span>
+                      )}
+                    </span>
                   )}
                 </button>
               )
@@ -606,16 +718,29 @@ export function AdminShippingHistory() {
           <p className="text-sm text-muted">
             {viewYear}년 {viewMonth}월 송장 대행 이력
           </p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={exportBusy || monthDays.length === 0}
-            onClick={() => void handleExcelDownload()}
-          >
-            <Download className="h-4 w-4" />
-            엑셀 다운로드
-          </Button>
+          <div className="flex items-center gap-2">
+            <select
+              className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-primary"
+              value={exportFarmId}
+              onChange={(e) => setExportFarmId(e.target.value)}
+              aria-label="엑셀로 내려받을 농가"
+            >
+              <option value="">전체 농가</option>
+              {farms.map((farm) => (
+                <option key={farm.id} value={farm.id}>{farm.name}</option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={exportBusy || monthDays.length === 0}
+              onClick={() => void handleExcelDownload()}
+            >
+              <Download className="h-4 w-4" />
+              엑셀 다운로드
+            </Button>
+          </div>
         </div>
         {exportError && <p className="text-sm text-red-600">{exportError}</p>}
         {loadError && <p className="text-sm text-red-600">{loadError}</p>}
@@ -697,7 +822,7 @@ export function AdminShippingHistory() {
                   </div>
                   <p className="text-xs text-muted mt-0.5">
                     작성 가능 농원:{' '}
-                    {farms.filter((f) => farmWritableOn(f, day.date))
+                    {farms.filter((f) => farmWritableOn(f, day.date, pauses[f.id]))
                       .map((f) => f.name)
                       .join(', ') || '없음'}
                   </p>
@@ -761,7 +886,7 @@ export function AdminShippingHistory() {
                     <tr className="bg-gray-50 text-left text-muted">
                       <th className="px-3 py-2 font-medium">채널</th>
                       {farms.map((farm) => {
-                        const canWrite = farmWritableOn(farm, day.date)
+                        const canWrite = farmWritableOn(farm, day.date, pauses[farm.id])
                         const offOpen = isOffDayUnlocked(day.date, farm.id)
                         return (
                           <th key={farm.id} className="px-3 py-2 font-medium align-top" colSpan={2}>
@@ -872,7 +997,7 @@ export function AdminShippingHistory() {
                           </td>
                           {farms.map((farm) => {
                             const cell = day.cells[farm.id]?.[channel] ?? emptyCell()
-                            const canWrite = farmWritableOn(farm, day.date)
+                            const canWrite = farmWritableOn(farm, day.date, pauses[farm.id])
                             const offOpen = isOffDayUnlocked(day.date, farm.id)
                             const farmOpen = canWrite || offOpen
                             const cellEditable =
