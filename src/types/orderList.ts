@@ -19,6 +19,7 @@ export interface OrderListModel {
   senderName?: string | null
   senderPhone?: string | null
   senderAddress?: string | null
+  senderAddressDetail?: string | null
   depositorName?: string | null
   itemsAmount?: number
   shippingFee?: number
