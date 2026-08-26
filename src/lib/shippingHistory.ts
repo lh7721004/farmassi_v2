@@ -38,7 +38,12 @@ export function emptyFarmCells(): Record<Channel, HistoryCell> {
 
 /** 정산 대상 농가. 비활성 농가도 지난 이력이 있으므로 전부 가져온다. */
 export async function loadFarms(): Promise<HistoryFarm[]> {
-  const { data } = await supabase.from('farms').select('id, name, delivery_days').order('name')
+  // 비활성 농가는 더 이상 송장을 대행하지 않으므로 이력 화면에서 뺀다.
+  const { data } = await supabase
+    .from('farms')
+    .select('id, name, delivery_days')
+    .eq('is_active', true)
+    .order('name')
   return (data ?? []).map((row: any) => ({
     id: row.id,
     name: row.name,
