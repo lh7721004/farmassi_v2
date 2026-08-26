@@ -88,7 +88,9 @@ function Row({ label, value }: { label: string; value?: string | null }) {
  * 열고 닫는 상태를 따로 들고 있지 않아도 된다.
  */
 function OrderDetails({ order }: { order: OrderListModel }) {
-  const hasSender = Boolean(order.senderName || order.senderPhone || order.senderAddress)
+  const hasSender = Boolean(
+    order.senderName || order.senderPhone || order.senderAddress || order.senderAddressDetail,
+  )
   const hasMoney = order.itemsAmount !== undefined || order.depositDueAmount !== undefined
   if (!hasSender && !hasMoney && !order.depositorName) return null
 
@@ -108,6 +110,13 @@ function OrderDetails({ order }: { order: OrderListModel }) {
             <Row label="보내는 분" value={order.senderName} />
             <Row label="연락처" value={order.senderPhone} />
             <Row label="주소" value={order.senderAddress} />
+            {/*
+              주소는 우편번호·도로명·상세를 합쳐 한 줄로 보여 준다. 상세주소만
+              적고 주소는 비운 주문이 있어서, 그럴 때는 상세만이라도 내보낸다.
+            */}
+            {!order.senderAddress && (
+              <Row label="상세주소" value={order.senderAddressDetail} />
+            )}
           </>
         )}
         <div className="!mt-2 border-t border-gray-200 pt-2" />
