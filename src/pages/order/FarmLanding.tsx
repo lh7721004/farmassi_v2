@@ -44,7 +44,7 @@ export function FarmLanding() {
   const blocks = parseLandingBlocks(farm.landing_blocks)
 
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="min-h-dvh bg-surface pb-40">
       <Header
         title={farm.name}
         subtitle={farmDisplayLocation(farm, '농가 직송')}
@@ -108,29 +108,32 @@ export function FarmLanding() {
             ) : null}
           </>
         )}
+      </div>
 
-        <FarmInquiryButtons
-          kakaoChannelUrl={farm.kakao_channel_url}
-          phone={farm.phone}
-          mobilePhone={farm.mobile_phone}
-        />
-
-        {farm.is_active ? (
-          <Link to={`/farm/${farm.slug}`} className="block">
-            <Button size="lg" fullWidth>
-              주문하기
-            </Button>
-          </Link>
-        ) : (
-          <>
-            <Button size="lg" fullWidth disabled>
-              지금은 주문을 받지 않습니다
-            </Button>
-            <Link to={`/farm/${farm.slug}`} className="block text-center text-sm text-primary">
-              상품 둘러보기
+      <div className="fixed bottom-0 left-0 right-0 z-20 p-4 pointer-events-none">
+        <div className="mx-auto flex max-w-5xl flex-col gap-2 pointer-events-auto">
+          <FarmInquiryButtons
+            kakaoChannelUrl={farm.kakao_channel_url}
+            phone={farm.phone}
+            mobilePhone={farm.mobile_phone}
+          />
+          {farm.is_active ? (
+            <Link to={`/farm/${farm.slug}`} className="block">
+              <Button size="lg" fullWidth>
+                주문하기
+              </Button>
             </Link>
-          </>
-        )}
+          ) : (
+            <>
+              <Button size="lg" fullWidth disabled>
+                지금은 주문을 받지 않습니다
+              </Button>
+              <Link to={`/farm/${farm.slug}`} className="block text-center text-sm text-primary">
+                상품 둘러보기
+              </Link>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
